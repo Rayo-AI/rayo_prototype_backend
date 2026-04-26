@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "es2022"
+    ],
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": [
+      "node"
+    ],
+    "isolatedModules": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitReturns": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "alwaysStrict": true,
+    "useUnknownInCatchVariables": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true
+  },
+  "include": [
+    "src",
+    "db",
+    "validation"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

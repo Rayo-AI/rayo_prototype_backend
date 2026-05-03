@@ -9,7 +9,9 @@ import type { ListTransactionsType } from './listTransactionsType';
 
 export type ListTransactionsParams = {
 category?: string;
+description?: string;
 type?: ListTransactionsType;
 startDate?: string;
 endDate?: string;
+amount?: number;
 };

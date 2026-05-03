@@ -9,8 +9,10 @@
 export interface Budget {
   id: number;
   userId: number;
+  category: string;
   monthlyLimit: number;
   totalSpent: number;
   remaining: number;
   percentUsed: number;
+  rollover: boolean;
 }

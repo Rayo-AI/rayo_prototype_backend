@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AuthUpdatePasswordBody = {
+export interface AuthUpdatePasswordBody {
   token: string;
   /** @minLength 8 */
   newPassword: string;
   /** @minLength 8 */
   confirmPassword: string;
-};
+}

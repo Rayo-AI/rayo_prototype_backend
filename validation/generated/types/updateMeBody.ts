@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AuthUpdatePassword200 = {
-  message?: string;
-};
+export interface UpdateMeBody {
+  /** @minLength 1 */
+  name?: string;
+  envelopeBased?: boolean;
+}

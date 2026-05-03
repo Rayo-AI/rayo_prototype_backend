@@ -26,8 +26,8 @@ export class AuthUseCase {
     return user;
   }
 
-  static async updateUser(userValues: any) {
-    const user = await AuthRepository.updateUser(userValues);
+  static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null }) {
+    const user = await AuthRepository.updateUser(userId, data);
     return user;
   }
 }

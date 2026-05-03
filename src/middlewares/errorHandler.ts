@@ -1,23 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
+import { ErrorResponse } from "../utils/errorResponse";
 
-interface AppError extends Error {
-  statusCode?: number;
-}
-
-export function errorHandler(
-  err: AppError,
-  _req: Request,
-  res: Response,
-  _next: NextFunction
-) {
-  const statusCode = err.statusCode ?? 500;
+export function errorHandler(err: ErrorResponse, req: Request, res: Response, next: NextFunction) {
+  const status = err.statusCode ?? 500;
   const message = err.message ?? "Internal server error";
 
-  console.error(`[Error] ${statusCode}: ${message}`);
-
-  res.status(statusCode).json({
+  res.status(status).json({
     success: false,
     message,
+    ...(err.errors ? { fields: err.errors } : {}),
     data: null,
   });
 }

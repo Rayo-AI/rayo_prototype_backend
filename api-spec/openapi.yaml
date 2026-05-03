@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
+  # Don't change title and version, these are used in the code generation and should be consistent with the package.json version. It affects import paths and generated client code. You can update the description to reflect the current state of the API, but keep title and version as is for consistency.
   title: Api
   version: 0.1.0
   description: Rayo AI Personal Finance API
@@ -110,6 +110,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMe
+      tags: [auth]
+      summary: Update current user preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /auth/reset-password:
     post:
@@ -121,23 +144,39 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  format: email
-              required:
-                - email
+              $ref: "#/components/schemas/AuthResetPasswordBody"
       responses:
         "200":
           description: Reset link sent (even if email doesn't exist, for security)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/resend-reset-link:
+    post:
+      operationId: authResendResetLink
+      tags: [auth]
+      summary: Resend password reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthResetPasswordBody"
+      responses:
+        "200":
+          description: Reset link resent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
         "400":
           description: Validation error
           content:
@@ -155,30 +194,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                token:
-                  type: string
-                newPassword:
-                  type: string
-                  minLength: 8
-                confirmPassword:
-                  type: string
-                  minLength: 8
-              required:
-                - token
-                - newPassword
-                - confirmPassword
+              $ref: "#/components/schemas/AuthUpdatePasswordBody"
       responses:
         "200":
           description: Password updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                $ref: "#/components/schemas/MessageResponse"
         "400":
           description: Validation error or invalid/expired token
           content:
@@ -196,6 +219,10 @@ paths:
           in: query
           schema:
             type: string
+        - name: description
+          in: query
+          schema:
+            type: string
         - name: type
           in: query
           schema:
@@ -209,6 +236,10 @@ paths:
           in: query
           schema:
             type: string
+        - name: amount
+          in: query
+          schema:
+            type: number
       responses:
         "200":
           description: List of transactions
@@ -218,6 +249,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       operationId: createTransaction
       tags: [transactions]
@@ -235,6 +272,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTransactions
+      tags: [transactions]
+      summary: Delete multiple transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteTransactionsBody"
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /transactions/{id}:
     delete:
@@ -250,19 +312,27 @@ paths:
       responses:
         "204":
           description: Deleted
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /budget:
     get:
       operationId: getBudget
       tags: [budget]
-      summary: Get current budget
+      summary: Get all category budgets
       responses:
         "200":
-          description: Current budget
+          description: All category budgets
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Budget"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Budget"
         "404":
           description: No budget set
           content:
@@ -286,6 +356,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Budget"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /budget/{category}:
+    delete:
+      operationId: deleteBudget
+      tags: [budget]
+      summary: Delete a budget category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Budget not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /savings:
     get:
@@ -318,6 +415,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SavingsGoal"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /savings/{id}:
     patch:
@@ -343,6 +446,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SavingsGoal"
+        "404":
+          description: Savings goal not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       operationId: deleteSavingsGoal
       tags: [savings]
@@ -356,6 +465,12 @@ paths:
       responses:
         "204":
           description: Deleted
+        "404":
+          description: Savings goal not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /dashboard/summary:
     get:
@@ -418,6 +533,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AiResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -428,6 +549,14 @@ components:
           type: string
       required:
         - status
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
 
     ErrorResponse:
       type: object
@@ -446,10 +575,22 @@ components:
           type: string
         email:
           type: string
+        envelopeBased:
+          type: boolean
       required:
         - id
         - name
         - email
+        - envelopeBased
+
+    UpdateMeBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        envelopeBased:
+          type: boolean
 
     AuthResponse:
       type: object
@@ -467,6 +608,7 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
         email:
           type: string
           format: email
@@ -489,6 +631,31 @@ components:
       required:
         - email
         - password
+
+    AuthResetPasswordBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+
+    AuthUpdatePasswordBody:
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+        confirmPassword:
+          type: string
+          minLength: 8
+      required:
+        - token
+        - newPassword
+        - confirmPassword
 
     Transaction:
       type: object
@@ -516,7 +683,6 @@ components:
         - type
         - amount
         - category
-        - description
         - date
         - createdAt
 
@@ -528,18 +694,31 @@ components:
           enum: [income, expense]
         amount:
           type: number
+          minimum: 0.01
         category:
           type: string
+          minLength: 1
         description:
           type: string
         date:
           type: string
+          minLength: 1
       required:
         - type
         - amount
         - category
-        - description
         - date
+
+    DeleteTransactionsBody:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+      required:
+        - ids
 
     Budget:
       type: object
@@ -548,6 +727,8 @@ components:
           type: integer
         userId:
           type: integer
+        category:
+          type: string
         monthlyLimit:
           type: number
         totalSpent:
@@ -556,21 +737,37 @@ components:
           type: number
         percentUsed:
           type: number
+        rollover:
+          type: boolean
       required:
         - id
         - userId
+        - category
         - monthlyLimit
         - totalSpent
         - remaining
         - percentUsed
+        - rollover
 
     UpsertBudgetBody:
       type: object
       properties:
+        category:
+          type: string
+          minLength: 1
         monthlyLimit:
           type: number
+          minimum: 0
+        rollover:
+          type: boolean
+          default: false
+        balance:
+          type: number
+          minimum: 0
       required:
+        - category
         - monthlyLimit
+        - rollover
 
     SavingsGoal:
       type: object
@@ -603,12 +800,16 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
         targetAmount:
           type: number
+          minimum: 0.01
         currentAmount:
           type: number
+          minimum: 0
         deadline:
           type: string
+          minLength: 1
       required:
         - name
         - targetAmount
@@ -619,12 +820,16 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
         targetAmount:
           type: number
+          minimum: 0.01
         currentAmount:
           type: number
+          minimum: 0
         deadline:
           type: string
+      required: []
 
     DashboardSummary:
       type: object
@@ -685,6 +890,7 @@ components:
       properties:
         question:
           type: string
+          minLength: 1
       required:
         - question
 

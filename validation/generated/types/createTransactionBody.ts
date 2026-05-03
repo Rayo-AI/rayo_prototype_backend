@@ -9,8 +9,11 @@ import type { CreateTransactionBodyType } from './createTransactionBodyType';
 
 export interface CreateTransactionBody {
   type: CreateTransactionBodyType;
+  /** @minimum 0.01 */
   amount: number;
+  /** @minLength 1 */
   category: string;
-  description: string;
+  description?: string;
+  /** @minLength 1 */
   date: string;
 }

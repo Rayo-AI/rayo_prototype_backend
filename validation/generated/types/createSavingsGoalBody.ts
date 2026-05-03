@@ -7,8 +7,12 @@
  */
 
 export interface CreateSavingsGoalBody {
+  /** @minLength 1 */
   name: string;
+  /** @minimum 0.01 */
   targetAmount: number;
+  /** @minimum 0 */
   currentAmount?: number;
+  /** @minLength 1 */
   deadline: string;
 }

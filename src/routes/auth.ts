@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../lib/auth.ts";
-import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resetPassword, sendResetLink } from "../deliveryman/auth.ts";
+import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resetPassword, sendResetLink } from "../handlers/auth.ts";
 
 const router: IRouter = Router();
 

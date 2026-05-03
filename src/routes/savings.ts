@@ -13,25 +13,9 @@ import { requireAuth } from "../lib/auth.ts";
 
 const router: IRouter = Router();
 
-function mapGoal(g: typeof savingsGoalsTable.$inferSelect) {
-  const target = parseFloat(g.targetAmount);
-  const current = parseFloat(g.currentAmount);
-  return {
-    id: g.id,
-    userId: g.userId,
-    name: g.name,
-    targetAmount: target,
-    currentAmount: current,
-    deadline: g.deadline,
-    percentComplete: target > 0 ? Math.min(100, (current / target) * 100) : 0,
-  };
-}
+router.use(requireAuth);
 
-router.get("/savings", requireAuth, async (req, res): Promise<void> => {
-  const userId = (req as typeof req & { userId: number }).userId;
-  const rows = await db.select().from(savingsGoalsTable).where(eq(savingsGoalsTable.userId, userId));
-  res.json(ListSavingsGoalsResponse.parse(rows.map(mapGoal)));
-});
+router.get("/savings", );
 
 router.post("/savings", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as typeof req & { userId: number }).userId;

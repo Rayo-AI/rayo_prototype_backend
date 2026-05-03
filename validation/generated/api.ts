@@ -19,12 +19,13 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Register a new user
  */
+
 export const authSignupBodyPasswordMin = 8;
 
 
 
 export const AuthSignupBody = zod.object({
-  "name": zod.string(),
+  "name": zod.string().min(1),
   "email": zod.string().email(),
   "password": zod.string().min(authSignupBodyPasswordMin)
 })
@@ -43,7 +44,8 @@ export const AuthLoginResponse = zod.object({
   "user": zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "email": zod.string()
+  "email": zod.string(),
+  "envelopeBased": zod.boolean()
 })
 })
 
@@ -54,7 +56,27 @@ export const AuthLoginResponse = zod.object({
 export const AuthMeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "email": zod.string()
+  "email": zod.string(),
+  "envelopeBased": zod.boolean()
+})
+
+
+/**
+ * @summary Update current user preferences
+ */
+
+
+
+export const UpdateMeBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "envelopeBased": zod.boolean().optional()
+})
+
+export const UpdateMeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "envelopeBased": zod.boolean()
 })
 
 
@@ -66,7 +88,19 @@ export const AuthResetPasswordBody = zod.object({
 })
 
 export const AuthResetPasswordResponse = zod.object({
-  "message": zod.string().optional()
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Resend password reset link
+ */
+export const AuthResendResetLinkBody = zod.object({
+  "email": zod.string().email()
+})
+
+export const AuthResendResetLinkResponse = zod.object({
+  "message": zod.string()
 })
 
 
@@ -86,7 +120,7 @@ export const AuthUpdatePasswordBody = zod.object({
 })
 
 export const AuthUpdatePasswordResponse = zod.object({
-  "message": zod.string().optional()
+  "message": zod.string()
 })
 
 
@@ -95,9 +129,11 @@ export const AuthUpdatePasswordResponse = zod.object({
  */
 export const ListTransactionsQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
+  "description": zod.coerce.string().optional(),
   "type": zod.enum(['income', 'expense']).optional(),
   "startDate": zod.coerce.string().optional(),
-  "endDate": zod.coerce.string().optional()
+  "endDate": zod.coerce.string().optional(),
+  "amount": zod.coerce.number().optional()
 })
 
 export const ListTransactionsResponseItem = zod.object({
@@ -106,7 +142,7 @@ export const ListTransactionsResponseItem = zod.object({
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number(),
   "category": zod.string(),
-  "description": zod.string(),
+  "description": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
 })
@@ -116,12 +152,29 @@ export const ListTransactionsResponse = zod.array(ListTransactionsResponseItem)
 /**
  * @summary Create a transaction
  */
+export const createTransactionBodyAmountMin = 0.01;
+
+
+
+
+
 export const CreateTransactionBody = zod.object({
   "type": zod.enum(['income', 'expense']),
-  "amount": zod.number(),
-  "category": zod.string(),
-  "description": zod.string(),
-  "date": zod.string()
+  "amount": zod.number().min(createTransactionBodyAmountMin),
+  "category": zod.string().min(1),
+  "description": zod.string().optional(),
+  "date": zod.string().min(1)
+})
+
+
+/**
+ * @summary Delete multiple transactions
+ */
+
+
+
+export const DeleteTransactionsBody = zod.object({
+  "ids": zod.array(zod.number()).min(1)
 })
 
 
@@ -134,32 +187,56 @@ export const DeleteTransactionParams = zod.object({
 
 
 /**
- * @summary Get current budget
+ * @summary Get all category budgets
  */
-export const GetBudgetResponse = zod.object({
+export const GetBudgetResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "category": zod.string(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
-  "percentUsed": zod.number()
+  "percentUsed": zod.number(),
+  "rollover": zod.boolean()
 })
+export const GetBudgetResponse = zod.array(GetBudgetResponseItem)
 
 
 /**
  * @summary Create or update budget
  */
+
+export const upsertBudgetBodyMonthlyLimitMin = 0;
+
+export const upsertBudgetBodyRolloverDefault = false;
+export const upsertBudgetBodyBalanceMin = 0;
+
+
+
 export const UpsertBudgetBody = zod.object({
-  "monthlyLimit": zod.number()
+  "category": zod.string().min(1),
+  "monthlyLimit": zod.number().min(upsertBudgetBodyMonthlyLimitMin),
+  "rollover": zod.boolean().default(upsertBudgetBodyRolloverDefault),
+  "balance": zod.number().min(upsertBudgetBodyBalanceMin).optional()
 })
 
 export const UpsertBudgetResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "category": zod.string(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
-  "percentUsed": zod.number()
+  "percentUsed": zod.number(),
+  "rollover": zod.boolean()
+})
+
+
+/**
+ * @summary Delete a budget category
+ */
+export const DeleteBudgetParams = zod.object({
+  "category": zod.coerce.string()
 })
 
 
@@ -181,11 +258,19 @@ export const ListSavingsGoalsResponse = zod.array(ListSavingsGoalsResponseItem)
 /**
  * @summary Create a savings goal
  */
+
+export const createSavingsGoalBodyTargetAmountMin = 0.01;
+
+export const createSavingsGoalBodyCurrentAmountMin = 0;
+
+
+
+
 export const CreateSavingsGoalBody = zod.object({
-  "name": zod.string(),
-  "targetAmount": zod.number(),
-  "currentAmount": zod.number().optional(),
-  "deadline": zod.string()
+  "name": zod.string().min(1),
+  "targetAmount": zod.number().min(createSavingsGoalBodyTargetAmountMin),
+  "currentAmount": zod.number().min(createSavingsGoalBodyCurrentAmountMin).optional(),
+  "deadline": zod.string().min(1)
 })
 
 
@@ -196,10 +281,17 @@ export const UpdateSavingsGoalParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
+export const updateSavingsGoalBodyTargetAmountMin = 0.01;
+
+export const updateSavingsGoalBodyCurrentAmountMin = 0;
+
+
+
 export const UpdateSavingsGoalBody = zod.object({
-  "name": zod.string().optional(),
-  "targetAmount": zod.number().optional(),
-  "currentAmount": zod.number().optional(),
+  "name": zod.string().min(1).optional(),
+  "targetAmount": zod.number().min(updateSavingsGoalBodyTargetAmountMin).optional(),
+  "currentAmount": zod.number().min(updateSavingsGoalBodyCurrentAmountMin).optional(),
   "deadline": zod.string().optional()
 })
 
@@ -237,7 +329,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number(),
   "category": zod.string(),
-  "description": zod.string(),
+  "description": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
 }))
@@ -270,8 +362,11 @@ export const GetAiInsightsResponse = zod.array(GetAiInsightsResponseItem)
 /**
  * @summary Ask the AI assistant a question
  */
+
+
+
 export const AskAiBody = zod.object({
-  "question": zod.string()
+  "question": zod.string().min(1)
 })
 
 export const AskAiResponse = zod.object({

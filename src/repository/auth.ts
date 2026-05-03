@@ -43,8 +43,13 @@ export class AuthRepository {
     return user;
   }
 
-  static async updateUser(userValues: any) {
-    const [user] = await db.update(usersTable).set(userValues).where(eq(usersTable.id, userValues.id)).returning();
-    return user;
-  }
+  // repository/auth.ts
+static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null }) {
+  const [user] = await db
+    .update(usersTable)
+    .set(data)
+    .where(eq(usersTable.id, userId))
+    .returning();
+  return user;
+}
 }

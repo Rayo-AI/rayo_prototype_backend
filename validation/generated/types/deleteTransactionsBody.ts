@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AskAiBody {
-  /** @minLength 1 */
-  question: string;
+export interface DeleteTransactionsBody {
+  /** @minItems 1 */
+  ids: number[];
 }

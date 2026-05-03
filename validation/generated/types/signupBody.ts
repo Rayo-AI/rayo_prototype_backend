@@ -7,6 +7,7 @@
  */
 
 export interface SignupBody {
+  /** @minLength 1 */
   name: string;
   email: string;
   /** @minLength 8 */

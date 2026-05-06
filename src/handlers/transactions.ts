@@ -4,8 +4,8 @@ import { TransactionUseCase } from "../usecases/transaction";
 import { appResponse } from "../utils/appResponse";
 import { ErrorResponse } from "../utils/errorResponse";
 
-function parseDMYY(dateStr: string): string {
-  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr; // already ISO, leave it
+export function parseDMYY(dateStr: string): string {
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr; 
 
   const parts = dateStr.split("/");
   if (parts.length !== 3) return dateStr; // let Zod handle the error
@@ -36,7 +36,7 @@ export const listTransactions = asyncHandler(async (req, res) => {
     amount: query.data.amount,
   });
 
-  const transactions = rows.map(t => ({
+  const transactions = rows.rows.map(t => ({
     id: t.id,
     userId: String(t.userId),
     type: t.type,
@@ -86,35 +86,35 @@ export const createTransaction = asyncHandler(async (req, res) => {
   }));
 });
 
-export const deleteTransaction = asyncHandler(async (req, res): Promise<void> => {
+export const deleteTransaction = asyncHandler(async (req, res, next) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteTransactionParams.safeParse({ id: parseInt(raw, 10) });
 
   if (!params.success) {
-    throw new ErrorResponse("Invalid transaction ID", 400, params.error.flatten().fieldErrors);
+    throw next(new ErrorResponse("Invalid transaction ID", 400, params.error.flatten().fieldErrors));
   }
 
   const deleted = await TransactionUseCase.deleteTransaction(userId, params.data.id);
 
   if (!deleted) {
-    throw new ErrorResponse("Transaction not found or not authorized to delete", 404);
+    throw next(new ErrorResponse("Transaction not found or not authorized to delete", 404));
   }
 
   return appResponse(res, 200, { message: "Transaction deleted successfully" });
 });
 
-export const deleteMultipleTransactions = asyncHandler(async (req, res) => {
+export const deleteMultipleTransactions = asyncHandler(async (req, res, next) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const ids = req.body.ids;
   if (!Array.isArray(ids) || !ids.every(id => typeof id === "number")) {
-    throw new ErrorResponse("Invalid request body: ids must be an array of numbers", 400);
+    throw next(new ErrorResponse("Invalid request body: ids must be an array of numbers", 400));
   }
 
   const deleted = await TransactionUseCase.deleteMultipleTransactions(userId, ids);
 
   if (!deleted) {
-    throw new ErrorResponse("One or more transactions not found or not authorized to delete", 404);
+    throw next(new ErrorResponse("One or more transactions not found or not authorized to delete", 404));
   }
 
   return appResponse(res, 200, { message: "Transactions deleted successfully" });
@@ -124,6 +124,10 @@ export const updateTransaction = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const transactionId = parseInt(raw, 10);
+
+  if (isNaN(transactionId)) {
+    throw new ErrorResponse("Invalid transaction ID", 400);
+  }
 
   const body = {
     ...req.body,
@@ -144,10 +148,10 @@ export const updateTransaction = asyncHandler(async (req, res) => {
   });
 
   if (!updated) {
-    throw new ErrorResponse("Transaction not found or not authorized to update", 404);
+    throw new ErrorResponse("Transaction not found or not authorized", 404);
   }
 
-  return appResponse(res, 200, ({
+  return appResponse(res, 200, {
     id: updated.id,
     userId: String(updated.userId),
     type: updated.type,
@@ -156,5 +160,5 @@ export const updateTransaction = asyncHandler(async (req, res) => {
     description: updated.description,
     date: updated.date,
     createdAt: updated.createdAt.toISOString(),
-  }));
+  }, "Transaction updated successfully");
 });

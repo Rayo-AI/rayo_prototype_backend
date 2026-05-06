@@ -11,11 +11,6 @@ export class TransactionUseCase {
     return incomeResult;
   }
 
-  static async getExpenseByCategory(userId: number, start: Date, end: Date) {
-    const expenseByCategory = await TransactionRepository.getExpenseByCategory(userId, start, end);
-    return expenseByCategory;
-  }
-
   static async getMonthlyExpenses(userId: number, start: Date, end: Date) {
     const expenseResult = await TransactionRepository.getMonthlyExpenses(userId, start, end);
     return expenseResult;
@@ -26,31 +21,26 @@ export class TransactionUseCase {
     return expenseResult;
   }
 
-  static async getTransactionsByCategory(userId: number, start: Date, end: Date) {
-    const transactions = await TransactionRepository.getTransactionsByCategory(userId, start, end);
+  static async getTransactionsByCategory(userId: number, filters: { start: Date, end: Date, limit?: number, page?: number }) {
+    const transactions = await TransactionRepository.getTransactionsByCategory(userId, filters);
     return transactions;
   }
 
-  // usecases/transaction.ts
-static async getTransactions(
-  userId: number,
-  filters: {
-    category?: string;
-    type?: string;
-    startDate?: Date;    
-    endDate?: Date;     
-    limit?: number;
-    orderBy?: "date" | "amount";
-    description?: string;  
-    amount?: number;      
-  } = {}
-) {
-  return await TransactionRepository.getTransactions(userId, filters);
-}
-
-  static async getTransactionByUserId(userId: number) {
-    const transaction = await TransactionRepository.getTransactionsByUserId(userId);
-    return transaction;
+  static async getTransactions(
+    userId: number,
+    filters: {
+      category?: string;
+      type?: string;
+      startDate?: Date;    
+      endDate?: Date;     
+      limit?: number;
+      orderBy?: "date" | "amount";
+      description?: string;  
+      amount?: number; 
+      page?: number;     
+    } = {}
+  ) {
+    return await TransactionRepository.getTransactions(userId, filters);
   }
 
   static async createTransaction(userId: number, data: {

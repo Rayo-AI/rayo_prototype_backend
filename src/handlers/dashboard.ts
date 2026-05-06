@@ -12,49 +12,56 @@ function getCurrentMonthRange() {
   return { start, end };
 }
 
-export const dashboardSummary = asyncHandler(async (req, res): Promise<void> => {
+const toNumber = (val: unknown): number => {
+  if (val == null) return 0;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") return parseFloat(val) || 0;
+  if (typeof val === "object" && "total" in val) {
+    const t = (val as Record<string, unknown>).total;
+    return typeof t === "number" ? t : parseFloat(String(t ?? "0")) || 0;
+  }
+  return 0;
+};
+
+export const dashboardSummary = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const { start, end } = getCurrentMonthRange();
 
-  const incomeResult = await TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end));
+  const [
+    incomeResult,
+    expenseResult,
+    allIncomeResult,
+    allExpenseResult,
+    budgets,
+    recentRows,
+  ] = await Promise.all([
+    TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end)),
+    TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end)),
+    TransactionUseCase.getAllTimeIncome(userId),
+    TransactionUseCase.getAllTimeExpenses(userId),
+    BudgetUseCase.getBudget(userId),
+    TransactionUseCase.getTransactions(userId, { limit: 5, page: 1 }),
+  ]);
 
-  const expenseResult = await TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end));
+  const monthlyIncome = Math.round(toNumber(incomeResult) * 100) / 100;
+  const monthlyExpenses = Math.round(toNumber(expenseResult) * 100) / 100;
+  const totalIncome = Math.round(toNumber(allIncomeResult) * 100) / 100;
+  const totalExpenses = Math.round(toNumber(allExpenseResult) * 100) / 100;
+  const totalBalance = Math.round((totalIncome - totalExpenses) * 100) / 100;
 
-  const allIncomeResult = await TransactionUseCase.getAllTimeIncome(userId);
+  // Aggregate across all budget categories
+  const budgetMonthlyLimit = budgets.rows.length > 0
+    ? Math.round(budgets.rows.reduce((sum, b) => sum + parseFloat(b.monthlyLimit), 0) * 100) / 100
+    : undefined;
+  const budgetPercentUsed = budgetMonthlyLimit
+    ? Math.round(Math.min(100, (monthlyExpenses / budgetMonthlyLimit) * 100) * 100) / 100
+    : undefined;
 
-  const allExpenseResult = await TransactionUseCase.getAllTimeExpenses(userId);
-
-  const budget = await BudgetUseCase.getBudget(userId);
-
-  // helpers to handle cases where usecases/repositories may return a number
-  // or an object with a `total` string field
-  const toNumber = (val: any): number => {
-    if (val == null) return 0;
-    if (typeof val === "number") return val;
-    if (typeof val === "string") return parseFloat(val) || 0;
-    if (typeof val === "object" && "total" in val) {
-      const t = (val as any).total;
-      return typeof t === "number" ? t : parseFloat(t ?? "0") || 0;
-    }
-    return 0;
-  };
-
-  const monthlyIncome = toNumber(incomeResult);
-  const monthlyExpenses = toNumber(expenseResult);
-  const totalIncome = toNumber(allIncomeResult);
-  const totalExpenses = toNumber(allExpenseResult);
-  const totalBalance = totalIncome - totalExpenses;
-
-  const budgetMonthlyLimit = budget ? parseFloat(budget.monthlyLimit) : undefined;
-  const budgetPercentUsed = budgetMonthlyLimit ? Math.min(100, (monthlyExpenses / budgetMonthlyLimit) * 100) : undefined;
-
-  const recentRows = await TransactionUseCase.getRecentTransactions(userId);
-
-  const recentTransactions = recentRows.map(t => ({
+  const recentTransactions = recentRows.rows.map(t => ({
     id: t.id,
-    userId: t.userId,
+    userId: String(t.userId),
     type: t.type,
-    amount: parseFloat(t.amount),
+    amount: Math.round(parseFloat(t.amount) * 100) / 100,
     category: t.category,
     description: t.description,
     date: t.date,
@@ -69,21 +76,19 @@ export const dashboardSummary = asyncHandler(async (req, res): Promise<void> => 
     budgetPercentUsed,
     recentTransactions,
   }), "Dashboard summary retrieved successfully");
-})
+});
 
-// export const dashboardSpendingByCategory = asyncHandler(async (req, res): Promise<void> => {
-//   const userId = (req as typeof req & { userId: number }).userId;
-//   const { start, end } = getCurrentMonthRange();
+export const dashboardSpendingByCategory = asyncHandler(async (req, res) => {
+  const userId = (req as typeof req & { userId: number }).userId;
+  const { start, end } = getCurrentMonthRange();
 
-//   const rows = ;
+  const rows = await TransactionUseCase.getTransactionsByCategory(userId, { start: new Date(start), end: new Date(end) });
 
-//   const total = rows.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+  const result = rows.map(r => ({
+    category: r.category,
+    amount: r.amount,
+    percentage: r.percentage,
+  }));
 
-//   const result = rows.map(r => ({
-//     category: r.category,
-//     amount: parseFloat(r.amount),
-//     percentage: total > 0 ? (parseFloat(r.amount) / total) * 100 : 0,
-//   }));
-
-//   res.json(GetSpendingByCategoryResponse.parse(result));
-// });
+  return appResponse(res, 200, GetSpendingByCategoryResponse.parse(result));
+});

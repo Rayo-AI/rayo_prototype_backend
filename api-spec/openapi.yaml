@@ -299,6 +299,42 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /transactions/{id}:
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Update a transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionBody"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  
     delete:
       operationId: deleteTransaction
       tags: [transactions]
@@ -389,6 +425,24 @@ paths:
       operationId: listSavingsGoals
       tags: [savings]
       summary: List savings goals
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: deadlineBefore
+          in: query
+          schema:
+            type: string
+        - name: deadlineAfter
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
       responses:
         "200":
           description: List of savings goals
@@ -709,6 +763,23 @@ components:
         - category
         - date
 
+    UpdateTransactionBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+        amount:
+          type: number
+          minimum: 0.01
+        category:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        date:
+          type: string
+
     DeleteTransactionsBody:
       type: object
       properties:
@@ -739,6 +810,8 @@ components:
           type: number
         rollover:
           type: boolean
+        balance:
+          type: number
       required:
         - id
         - userId
@@ -760,7 +833,7 @@ components:
           minimum: 0
         rollover:
           type: boolean
-          default: false
+          default: true
         balance:
           type: number
           minimum: 0

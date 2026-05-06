@@ -1,8 +1,12 @@
 import { BudgetRepository } from "../repository/budget";
 
 export class BudgetUseCase {
-  static async getBudget(userId: number) {
-    const budget = await BudgetRepository.getAllBudgets(userId);
+  static async getBudget(userId: number, filters: {
+    category?: string;
+    limit?: number;
+    page?: number;
+  } = {}) {
+    const budget = await BudgetRepository.getAllBudgets(userId, filters);
     return budget;
   }
 

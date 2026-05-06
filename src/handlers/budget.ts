@@ -47,7 +47,7 @@ export const getBudgets = asyncHandler(async (req, res) => {
   const { start, end } = getCurrentMonthRange();
 
   const response = await Promise.all(
-    budgets.map(async (b) => {
+    budgets.rows.map(async (b) => {
       const totalSpent = await TransactionUseCase.getSpentByCategory(userId, b.category, start, end);
       const monthlyLimit = parseFloat(b.monthlyLimit);
       const remaining = Math.max(0, monthlyLimit - totalSpent);
@@ -61,6 +61,7 @@ export const getBudgets = asyncHandler(async (req, res) => {
 
 export const setBudget = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
+  const params = req.params;
 
   const parsed = UpsertBudgetBody.safeParse(req.body);
   if (!parsed.success) {
@@ -80,12 +81,11 @@ export const setBudget = asyncHandler(async (req, res) => {
   return appResponse(res, 200, validated);
 });
 
-// usecases/budget.ts
 export async function processMonthRollover(userId: number, start: string, end: string) {
   const user = await AuthUseCase.findUserById(userId);
   const budgets = await BudgetUseCase.getBudget(userId);
 
-  for (const budget of budgets) {
+  for (const budget of budgets.rows) {
     // per-category rollover overrides global preference
     const isEnvelope = budget.rollover ?? user.envelopeBased;
     if (!isEnvelope) continue;

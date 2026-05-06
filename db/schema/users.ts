@@ -7,7 +7,7 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  envelopeBased: boolean("envelope_based").notNull().default(false), // ← false = zero-based, true = envelope
+  envelopeBased: boolean("envelope_based").notNull().default(true), // ← false = zero-based, true = envelope
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

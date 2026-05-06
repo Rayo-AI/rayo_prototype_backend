@@ -15,4 +15,5 @@ export interface Budget {
   remaining: number;
   percentUsed: number;
   rollover: boolean;
+  balance?: number;
 }

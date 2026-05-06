@@ -179,6 +179,38 @@ export const DeleteTransactionsBody = zod.object({
 
 
 /**
+ * @summary Update a transaction
+ */
+export const UpdateTransactionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateTransactionBodyAmountMin = 0.01;
+
+
+
+
+export const UpdateTransactionBody = zod.object({
+  "type": zod.enum(['income', 'expense']).optional(),
+  "amount": zod.number().min(updateTransactionBodyAmountMin).optional(),
+  "category": zod.string().min(1).optional(),
+  "description": zod.string().optional(),
+  "date": zod.string().optional()
+})
+
+export const UpdateTransactionResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "type": zod.enum(['income', 'expense']),
+  "amount": zod.number(),
+  "category": zod.string(),
+  "description": zod.string().optional(),
+  "date": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Delete a transaction
  */
 export const DeleteTransactionParams = zod.object({
@@ -197,7 +229,8 @@ export const GetBudgetResponseItem = zod.object({
   "totalSpent": zod.number(),
   "remaining": zod.number(),
   "percentUsed": zod.number(),
-  "rollover": zod.boolean()
+  "rollover": zod.boolean(),
+  "balance": zod.number().optional()
 })
 export const GetBudgetResponse = zod.array(GetBudgetResponseItem)
 
@@ -208,7 +241,7 @@ export const GetBudgetResponse = zod.array(GetBudgetResponseItem)
 
 export const upsertBudgetBodyMonthlyLimitMin = 0;
 
-export const upsertBudgetBodyRolloverDefault = false;
+export const upsertBudgetBodyRolloverDefault = true;
 export const upsertBudgetBodyBalanceMin = 0;
 
 
@@ -228,7 +261,8 @@ export const UpsertBudgetResponse = zod.object({
   "totalSpent": zod.number(),
   "remaining": zod.number(),
   "percentUsed": zod.number(),
-  "rollover": zod.boolean()
+  "rollover": zod.boolean(),
+  "balance": zod.number().optional()
 })
 
 
@@ -243,6 +277,16 @@ export const DeleteBudgetParams = zod.object({
 /**
  * @summary List savings goals
  */
+
+
+
+export const ListSavingsGoalsQueryParams = zod.object({
+  "name": zod.coerce.string().optional(),
+  "deadlineBefore": zod.coerce.string().optional(),
+  "deadlineAfter": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().min(1).optional()
+})
+
 export const ListSavingsGoalsResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),

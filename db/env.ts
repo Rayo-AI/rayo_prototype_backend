@@ -14,6 +14,11 @@ const ENV = {
   DATABASE_URL: process.env.DATABASE_URL,
   PORT: process.env.PORT || 3000,
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  GEMINI: {
+    API_KEY: process.env.GEMINI_API_KEY,
+    API_URL: process.env.GEMINI_API_URL,
+    API_NAME: process.env.GEMINI_API_NAME,
+  },
 }
 
 export default ENV;

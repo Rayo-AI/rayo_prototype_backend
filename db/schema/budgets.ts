@@ -9,7 +9,7 @@ export const budgetsTable = pgTable("budgets", {
   category: text("category").notNull(),
   monthlyLimit: numeric("monthly_limit", { precision: 12, scale: 2 }).notNull(),
   balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0"),
-  rollover: boolean("rollover").notNull().default(false), // ← false = zero-based, true = envelope
+  rollover: boolean("rollover").notNull().default(true), // ← false = zero-based, true = envelope
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

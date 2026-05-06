@@ -20,7 +20,7 @@ router.post("/transactions", createTransaction);
 
 router.delete("/transactions/:id", deleteTransaction);
 
-router.put("/transactions/:id", updateTransaction);
+router.patch("/transactions/:id", updateTransaction);
 
 router.delete("/transactions", deleteMultipleTransactions);
 

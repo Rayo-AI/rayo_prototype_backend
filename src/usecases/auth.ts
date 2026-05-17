@@ -21,12 +21,17 @@ export class AuthUseCase {
     return user;
   }
 
+  static async findUserByOTP(otp: string) {
+    const user = await AuthRepository.findUserByOTP(otp);
+    return user;
+  }
+
   static async updateUserPassword(userId: number, passwordHash: string) {
     const user = await AuthRepository.updateUserPassword(userId, passwordHash);
     return user;
   }
 
-  static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null }) {
+  static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null, emailVerified?: boolean, verificationOTP?: string | null, verificationOTPExpiry?: Date | null }) {
     const user = await AuthRepository.updateUser(userId, data);
     return user;
   }

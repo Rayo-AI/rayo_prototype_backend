@@ -1,4 +1,6 @@
 import { GetDashboardSummaryResponse, GetSpendingByCategoryResponse } from "../../validation";
+import { getCached } from "../lib/cache";
+import { CACHE_KEYS, CACHE_TTL } from "../lib/cacheKeys";
 import { BudgetUseCase } from "../usecases/budget";
 import { TransactionUseCase } from "../usecases/transaction";
 import { appResponse } from "../utils/appResponse";
@@ -26,56 +28,64 @@ const toNumber = (val: unknown): number => {
 export const dashboardSummary = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const { start, end } = getCurrentMonthRange();
+  const monthKey = `${start}-${end}`;
 
-  const [
-    incomeResult,
-    expenseResult,
-    allIncomeResult,
-    allExpenseResult,
-    budgets,
-    recentRows,
-  ] = await Promise.all([
-    TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end)),
-    TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end)),
-    TransactionUseCase.getAllTimeIncome(userId),
-    TransactionUseCase.getAllTimeExpenses(userId),
-    BudgetUseCase.getBudget(userId),
-    TransactionUseCase.getTransactions(userId, { limit: 5, page: 1 }),
-  ]);
+  const summary = await getCached(
+    CACHE_KEYS.dashboardMonth(userId, monthKey), async () => {
+    const [
+      incomeResult,
+      expenseResult,
+      allIncomeResult,
+      allExpenseResult,
+      budgets,
+      recentRows,
+    ] = await Promise.all([
+      TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end)),
+      TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end)),
+      TransactionUseCase.getAllTimeIncome(userId),
+      TransactionUseCase.getAllTimeExpenses(userId),
+      BudgetUseCase.getBudget(userId),
+      TransactionUseCase.getTransactions(userId, { limit: 5, page: 1 }),
+    ]);
 
-  const monthlyIncome = Math.round(toNumber(incomeResult) * 100) / 100;
-  const monthlyExpenses = Math.round(toNumber(expenseResult) * 100) / 100;
-  const totalIncome = Math.round(toNumber(allIncomeResult) * 100) / 100;
-  const totalExpenses = Math.round(toNumber(allExpenseResult) * 100) / 100;
-  const totalBalance = Math.round((totalIncome - totalExpenses) * 100) / 100;
+    const monthlyIncome = Math.round(toNumber(incomeResult) * 100) / 100;
+    const monthlyExpenses = Math.round(toNumber(expenseResult) * 100) / 100;
+    const totalIncome = Math.round(toNumber(allIncomeResult) * 100) / 100;
+    const totalExpenses = Math.round(toNumber(allExpenseResult) * 100) / 100;
+    const totalBalance = Math.round((totalIncome - totalExpenses) * 100) / 100;
 
-  // Aggregate across all budget categories
-  const budgetMonthlyLimit = budgets.rows.length > 0
-    ? Math.round(budgets.rows.reduce((sum, b) => sum + parseFloat(b.monthlyLimit), 0) * 100) / 100
-    : undefined;
-  const budgetPercentUsed = budgetMonthlyLimit
-    ? Math.round(Math.min(100, (monthlyExpenses / budgetMonthlyLimit) * 100) * 100) / 100
-    : undefined;
+    // Aggregate across all budget categories
+    const budgetMonthlyLimit = budgets.rows.length > 0
+      ? Math.round(budgets.rows.reduce((sum, b) => sum + parseFloat(b.monthlyLimit), 0) * 100) / 100
+      : undefined;
+    const budgetPercentUsed = budgetMonthlyLimit
+      ? Math.round(Math.min(100, (monthlyExpenses / budgetMonthlyLimit) * 100) * 100) / 100
+      : undefined;
 
-  const recentTransactions = recentRows.rows.map(t => ({
-    id: t.id,
-    userId: String(t.userId),
-    type: t.type,
-    amount: Math.round(parseFloat(t.amount) * 100) / 100,
-    category: t.category,
-    description: t.description,
-    date: t.date,
-    createdAt: t.createdAt.toISOString(),
-  }));
+    const recentTransactions = recentRows.rows.map(t => ({
+      id: t.id,
+      userId: String(t.userId),
+      type: t.type,
+      amount: Math.round(parseFloat(t.amount) * 100) / 100,
+      category: t.category,
+      description: t.description,
+      date: t.date,
+      createdAt: t.createdAt.toISOString(),
+    }));
 
-  return appResponse(res, 200, GetDashboardSummaryResponse.parse({
-    totalBalance,
-    monthlyIncome,
-    monthlyExpenses,
-    budgetMonthlyLimit,
-    budgetPercentUsed,
-    recentTransactions,
-  }), "Dashboard summary retrieved successfully");
+    return {
+      totalBalance,
+      monthlyIncome,
+      monthlyExpenses,
+      budgetMonthlyLimit,
+      budgetPercentUsed,
+      recentTransactions,
+    };
+  },
+  CACHE_TTL.MEDIUM // Cache for 5 minutes
+);
+
+  return appResponse(res, 200, GetDashboardSummaryResponse.parse(summary), "Dashboard summary retrieved successfully");
 });
 
 export const dashboardSpendingByCategory = asyncHandler(async (req, res) => {

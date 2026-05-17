@@ -8,6 +8,9 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   envelopeBased: boolean("envelope_based").notNull().default(true), // ← false = zero-based, true = envelope
+  emailVerified: boolean("email_verified").notNull().default(false),
+  verificationOTP: text("verification_otp"),
+  verificationOTPExpiry: timestamp("verification_otp_expiry"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -43,13 +43,18 @@ export class AuthRepository {
     return user;
   }
 
-  // repository/auth.ts
-static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null }) {
-  const [user] = await db
-    .update(usersTable)
-    .set(data)
-    .where(eq(usersTable.id, userId))
-    .returning();
-  return user;
-}
+    static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null, emailVerified?: boolean, verificationOTP?: string | null, verificationOTPExpiry?: Date | null }) {
+    const [user] = await db
+      .update(usersTable)
+      .set(data)
+      .where(eq(usersTable.id, userId))
+      .returning();
+    return user;
+  }
+
+  static async findUserByOTP(otp: string) {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.verificationOTP, otp));
+    logger.info(`Looking for user with verification OTP: ${otp}, found: ${user ? user.email : "none"}`);
+    return user;
+  }
 }

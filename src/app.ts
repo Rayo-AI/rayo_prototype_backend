@@ -1,10 +1,12 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import * as Sentry from "@sentry/node";
 import Router from "./routes/index.ts";
 import { logger } from "./lib/logger.ts";
 import { errorHandler } from "./middlewares/errorHandler.ts";
 import { asyncHandler } from "./utils/asyncHandler.ts";
+import { apiLimiter } from "./lib/rateLimiter.ts";
 
 const app: Express = express();
 
@@ -31,6 +33,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
 app.get("/", asyncHandler(async (req, res) => {
   res.json({ message: "Welcome to Rayo Finance API" });
 }));
@@ -44,6 +49,13 @@ function notFound(req: express.Request, _res: express.Response, next: express.Ne
 }
 
 app.use(notFound);
+
+// Sentry error handler wrapper
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  Sentry.captureException(err);
+  next(err);
+});
+
 app.use(errorHandler);
 
 export default app;

@@ -1,6 +1,8 @@
-import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthResetPasswordBody, AuthResetPasswordResponse, AuthUpdatePasswordBody, UpdateMeBody } from "../../validation/index.ts";
+import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthResetPasswordBody, AuthResetPasswordResponse, AuthUpdatePasswordBody, UpdateMeBody, VerifyOtpBody } from "../../validation/index.ts";
 import { createToken, createTokenWithCustomExpiry, hashPassword, comparePassword } from "../lib/auth.ts";
+import { generateOTP, getOTPExpiry, hashOTP } from "../lib/otp.ts";
 import { logger } from "../lib/logger.ts";
+import { sendSignUpEmail, sendOTPEmail, sendPasswordResetEmail, sendSuccessfulResetEmail, sendResendResetLinkEmail } from "../services/email.ts";
 import { AuthUseCase } from "../usecases/auth.ts";
 import { appResponse } from "../utils/appResponse.ts";
 import { asyncHandler } from "../utils/asyncHandler.ts";
@@ -28,11 +30,112 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   logger.info(`New user registered: ${email} (ID: ${newUser.id})`);
-  const token = await createToken({ userId: newUser.id });
 
-  // TODO: In production, we should not reveal whether the email exists or not to prevent user enumeration attacks. We can log the attempt for monitoring purposes but always return a generic error message.
-  // TODO: We should also consider implementing email verification to ensure the email belongs to the user and to prevent abuse of the registration endpoint.
-  return appResponse(res, 201, AuthLoginResponse.parse({ token, user: { id: newUser.id, name: newUser.name, email: newUser.email } }));
+  // Generate OTP for email verification
+  const otp = generateOTP();
+  const otpExpiry = getOTPExpiry();
+  const otpHash = hashOTP(otp);
+
+  await AuthUseCase.updateUser(newUser.id, { verificationOTP: otpHash, verificationOTPExpiry: otpExpiry });
+
+  // Send OTP email
+  const emailResult = await sendOTPEmail(email, name, otp);
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send OTP email to ${email}: ${emailResult.error}`);
+    // We won't fail the registration if the email fails to send, but we should log it for monitoring
+  }
+
+  logger.info(`OTP generated and sent to ${email} (ID: ${newUser.id})`);
+  return appResponse(res, 201, null, "User registered successfully. Please check your email for the verification code.");
+});
+
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const parsed = VerifyOtpBody.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
+  }
+
+  const { email, otp } = parsed.data;
+
+  const user = await AuthUseCase.findUserByEmail(email);
+  if (!user) {
+    logger.warn(`OTP verification attempted for non-existent email: ${email}`);
+    throw new ErrorResponse("Invalid email or OTP", 400);
+  }
+
+  if (user.emailVerified) {
+    throw new ErrorResponse("Email already verified", 400);
+  }
+
+  if (!user.verificationOTP || user.verificationOTP !== hashOTP(otp)) {
+    logger.warn(`Invalid OTP provided for email: ${email}`);
+    throw new ErrorResponse("Invalid OTP", 400);
+  }
+
+  if (user.verificationOTPExpiry && user.verificationOTPExpiry.getTime() < Date.now()) {
+    logger.warn(`OTP expired for email: ${email}`);
+    throw new ErrorResponse("OTP expired. Please request a new one.", 400);
+  }
+
+  // Mark email as verified and clear OTP
+  await AuthUseCase.updateUser(user.id, { 
+    emailVerified: true, 
+    verificationOTP: null, 
+    verificationOTPExpiry: null 
+  });
+
+  const token = await createToken({ userId: user.id });
+  logger.info(`Email verified for user: ${email} (ID: ${user.id})`);
+
+  const emailResult = await sendSignUpEmail({ email, name: user.name });
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send sign-up email to ${email}: ${emailResult.error}`);
+    // We won't fail the verification if the email fails to send, but we should log it for monitoring
+  }
+
+  return appResponse(res, 200, AuthLoginResponse.parse({ 
+    token, 
+    user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased } 
+  }));
+});
+
+export const resendVerificationOtp = asyncHandler(async (req, res) => {
+  const parsed = AuthResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
+  }
+
+  const { email } = parsed.data;
+
+  const user = await AuthUseCase.findUserByEmail(email);
+  if (!user) {
+    logger.warn(`Resend OTP requested for non-existent email: ${email}`);
+    return appResponse(res, 200, null, "If that email exists, a verification code has been sent");
+  }
+
+  if (user.emailVerified) {
+    throw new ErrorResponse("Email already verified", 400);
+  }
+
+  // Generate new OTP
+  const otp = generateOTP();
+  const otpExpiry = getOTPExpiry();
+  const otpHash = hashOTP(otp);
+
+  await AuthUseCase.updateUser(user.id, { verificationOTP: otpHash, verificationOTPExpiry: otpExpiry });
+
+  // Send OTP email
+  const emailResult = await sendOTPEmail(email, user.name, otp);
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send OTP email to ${email}: ${emailResult.error}`);
+    throw new ErrorResponse("Failed to send verification code", 500);
+  }
+
+  logger.info(`OTP resent to ${email} (ID: ${user.id})`);
+  return appResponse(res, 200, null, "Verification code has been sent to your email");
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
@@ -48,8 +151,12 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Invalid credentials", 401);
   }
 
+  if (!user.emailVerified) {
+    throw new ErrorResponse("Email not verified. Please check your email for the verification code.", 401);
+  }
+
   const token = await createToken({ userId: user.id });
-  return appResponse(res, 200, AuthLoginResponse.parse({ token, user: { id: user.id, name: user.name, email: user.email } }));
+  return appResponse(res, 200, AuthLoginResponse.parse({ token, user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased } }));
 });
 
 export const getAuthenticatedUser = asyncHandler(async (req, res) => {
@@ -63,7 +170,7 @@ export const getAuthenticatedUser = asyncHandler(async (req, res) => {
     throw new ErrorResponse("User not found", 401);
   }
 
-  return appResponse(res, 200, AuthMeResponse.parse({ id: user.id, name: user.name, email: user.email }));
+  return appResponse(res, 200, AuthMeResponse.parse({ id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased }));
 });
 
 export const sendResetLink = asyncHandler(async (req, res) => {
@@ -83,20 +190,31 @@ export const sendResetLink = asyncHandler(async (req, res) => {
   const resetToken = await createTokenWithCustomExpiry({ userId: user.id }, "15m");
   await AuthUseCase.updateUser(user.id, { resetToken, resetTokenExpiry: new Date(Date.now() + 15 * 60 * 1000) });
 
-  // TODO: In production, we should send an actual email with the reset link instead of just logging the token. We can use a service like SendGrid, Mailgun, or Amazon SES for this purpose. The reset link should point to a frontend page where the user can enter their new password along with the token.
-  // TODO: We should also consider implementing rate limiting on this endpoint to prevent abuse and potential denial of service attacks.
-  // TODO: Remove the resetToken from the response in production, it's only included here for testing purposes
-  logger.info(`Password reset link generated for user: ${user.email} (ID: ${user.id} resetToken: ${resetToken})`);
+  const emailResult = await sendPasswordResetEmail(email, resetToken);
+  logger.info(`Password reset link generated for user: ${email} (ID: ${user.id})`);
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send password reset email to ${email}: ${emailResult.error}`);
+    // We won't fail the request if the email fails to send, but we should log it for monitoring
+  }
+
+  logger.info(`Password reset link generated for user: ${user.email} (ID: ${user.id})`);
   return appResponse(res, 200, AuthResetPasswordResponse.parse({ message: "If that email exists, a reset link has been sent" }));
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {
+  const token = req.query.token as string;
+  
+  if (!token) {
+    throw new ErrorResponse("Reset token is required", 400);
+  }
+
   const parsed = AuthUpdatePasswordBody.safeParse(req.body);
   if (!parsed.success) {
     throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
   }
 
-  const { token, newPassword, confirmPassword } = parsed.data;
+  const { newPassword, confirmPassword } = parsed.data;
 
   if (newPassword !== confirmPassword) {
     logger.warn(`Password reset failed due to password mismatch for token: ${token}`);
@@ -119,7 +237,13 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   await AuthUseCase.updateUser(user.id, { resetToken: null, resetTokenExpiry: null });
 
-  // TODO: In production, we should consider sending a confirmation email to the user after their password has been successfully reset. This can help alert them to any unauthorized password reset attempts and provide an additional layer of security.
+  const emailResult = await sendSuccessfulResetEmail(user.email);
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send password reset confirmation email to ${user.email}: ${emailResult.error}`);
+    // We won't fail the request if the email fails to send, but we should log it for monitoring
+  }
+
   logger.info(`Password updated for user: ${user.email} (ID: ${user.id})`);
   return appResponse(res, 200, AuthResetPasswordResponse.parse({ message: "Password has been reset successfully" }));
 });
@@ -141,7 +265,13 @@ export const resendResetLink = asyncHandler(async (req, res) => {
   const resetToken = await createTokenWithCustomExpiry({ userId: user.id }, "15m");
   await AuthUseCase.updateUser(user.id, { resetToken, resetTokenExpiry: new Date(Date.now() + 15 * 60 * 1000) });
 
-  // TODO: In production, we should send an actual email with the reset link instead of just logging the token. We can use a service like SendGrid, Mailgun, or Amazon SES for this purpose. The reset link should point to a frontend page where the user can enter their new password along with the token.
+  const emailResult = await sendResendResetLinkEmail(email, resetToken);
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send resend password reset email to ${email}: ${emailResult.error}`);
+    throw new ErrorResponse("Failed to resend reset link", 500);
+  }
+  
   logger.info(`Password reset link resent for user: ${user.email} (ID: ${user.id} resetToken: ${resetToken})`);
   return appResponse(res, 200, AuthResetPasswordResponse.parse({ message: "If that email exists, a reset link has been sent" }));
 });

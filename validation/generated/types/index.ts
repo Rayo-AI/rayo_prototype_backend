@@ -37,3 +37,4 @@ export * from './updateTransactionBody';
 export * from './updateTransactionBodyType';
 export * from './upsertBudgetBody';
 export * from './user';
+export * from './verifyOtpBody';

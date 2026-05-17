@@ -1,6 +1,10 @@
 import ENV from "../db/env.ts";
 import app from "./app.ts";
 import { logger } from "./lib/logger.ts";
+import { initSentry, captureError } from "./lib/sentry.ts";
+
+// Initialize Sentry first for error tracking
+initSentry();
 
 const rawPort = ENV.PORT;
 
@@ -18,9 +22,23 @@ if (Number.isNaN(port) || port <= 0) {
 
 app.listen(port, (err) => {
   if (err) {
-    logger.error({ err }, "Error listening on port");
+    captureError(err, { port }, "fatal");
     process.exit(1);
   }
 
   logger.info({ port }, "Server listening");
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  captureError(error, { type: "uncaughtException" }, "fatal");
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  captureError(new Error(String(reason)), {
+    type: "unhandledRejection",
+    promise: String(promise),
+  }, "error");
 });

@@ -32,6 +32,28 @@ export const AuthSignupBody = zod.object({
 
 
 /**
+ * @summary Verify email with OTP
+ */
+
+
+
+export const VerifyOtpBody = zod.object({
+  "email": zod.string().email(),
+  "otp": zod.string().min(1)
+})
+
+export const VerifyOtpResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "envelopeBased": zod.boolean()
+})
+})
+
+
+/**
  * @summary Login
  */
 export const AuthLoginBody = zod.object({

@@ -3,6 +3,8 @@ import { CreateTransactionBody, DeleteTransactionParams, ListTransactionsQueryPa
 import { TransactionUseCase } from "../usecases/transaction";
 import { appResponse } from "../utils/appResponse";
 import { ErrorResponse } from "../utils/errorResponse";
+import { invalidateCache } from "../lib/cache";
+import { CACHE_KEYS } from "../lib/cacheKeys";
 
 export function parseDMYY(dateStr: string): string {
   if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr; 
@@ -74,6 +76,21 @@ export const createTransaction = asyncHandler(async (req, res) => {
     date: parsed.data.date,
   });
 
+  // Invalidate related caches
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthEndKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const monthRange = `${monthKey}-${monthEndKey}`;
+
+  await Promise.all([
+    invalidateCache(CACHE_KEYS.dashboardMonth(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactions(userId)),
+    invalidateCache(CACHE_KEYS.monthlyIncome(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.monthlyExpenses(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactionsByCategory(userId, monthRange)),
+  ]);
+
   return appResponse(res, 201, ({
     id: row.id,
     userId: String(row.userId),
@@ -101,6 +118,21 @@ export const deleteTransaction = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse("Transaction not found or not authorized to delete", 404));
   }
 
+  // Invalidate related caches
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthEndKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const monthRange = `${monthKey}-${monthEndKey}`;
+
+  await Promise.all([
+    invalidateCache(CACHE_KEYS.dashboardMonth(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactions(userId)),
+    invalidateCache(CACHE_KEYS.monthlyIncome(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.monthlyExpenses(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactionsByCategory(userId, monthRange)),
+  ]);
+
   return appResponse(res, 200, { message: "Transaction deleted successfully" });
 });
 
@@ -116,6 +148,21 @@ export const deleteMultipleTransactions = asyncHandler(async (req, res, next) =>
   if (!deleted) {
     throw next(new ErrorResponse("One or more transactions not found or not authorized to delete", 404));
   }
+
+  // Invalidate related caches
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthEndKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const monthRange = `${monthKey}-${monthEndKey}`;
+
+  await Promise.all([
+    invalidateCache(CACHE_KEYS.dashboardMonth(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactions(userId)),
+    invalidateCache(CACHE_KEYS.monthlyIncome(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.monthlyExpenses(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactionsByCategory(userId, monthRange)),
+  ]);
 
   return appResponse(res, 200, { message: "Transactions deleted successfully" });
 });
@@ -150,6 +197,21 @@ export const updateTransaction = asyncHandler(async (req, res) => {
   if (!updated) {
     throw new ErrorResponse("Transaction not found or not authorized", 404);
   }
+
+  // Invalidate related caches
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthEndKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const monthRange = `${monthKey}-${monthEndKey}`;
+
+  await Promise.all([
+    invalidateCache(CACHE_KEYS.dashboardMonth(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactions(userId)),
+    invalidateCache(CACHE_KEYS.monthlyIncome(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.monthlyExpenses(userId, monthRange)),
+    invalidateCache(CACHE_KEYS.transactionsByCategory(userId, monthRange)),
+  ]);
 
   return appResponse(res, 200, {
     id: updated.id,

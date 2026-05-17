@@ -49,11 +49,11 @@ paths:
               $ref: "#/components/schemas/SignupBody"
       responses:
         "201":
-          description: User created
+          description: User created, OTP sent to email
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/MessageResponse"
         "400":
           description: Validation error
           content:
@@ -62,6 +62,31 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify email with OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpBody"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error or invalid OTP
           content:
             application/json:
               schema:
@@ -710,6 +735,19 @@ components:
         - token
         - newPassword
         - confirmPassword
+
+    VerifyOtpBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - otp
 
     Transaction:
       type: object

@@ -50,11 +50,8 @@ function notFound(req: express.Request, _res: express.Response, next: express.Ne
 
 app.use(notFound);
 
-// Sentry error handler wrapper
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  Sentry.captureException(err);
-  next(err);
-});
+// Sentry error handler - use official setupExpressErrorHandler
+Sentry.setupExpressErrorHandler(app);
 
 app.use(errorHandler);
 

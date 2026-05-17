@@ -2,23 +2,15 @@ import * as Sentry from "@sentry/node";
 import type { Request, Response, NextFunction } from "express";
 import ENV from "../../db/env.ts";
 
-/**
- * Initialize Sentry for error tracking and monitoring
- * Errors are sent to Sentry and NOT logged to console for security
- */
-export function initSentry() {
-  Sentry.init({
-    dsn: ENV.SENTRY_DSN,
-    environment: ENV.NODE_ENV,
-    tracesSampleRate: 0.1,
-    enabled: ENV.NODE_ENV !== "development",
-    // Security: Don't log errors to console
-    beforeSend(event) {
-      // Filter out sensitive data before sending to Sentry
-      return event;
-    },
-  });
-}
+// Initialize Sentry
+Sentry.init({
+  dsn: ENV.SENTRY_DSN,
+  environment: ENV.NODE_ENV,
+  tracesSampleRate: 0.1, // Adjust this value in production
+  sendDefaultPii: true,
+  attachStacktrace: true,
+  debug: false, // Disable debug logging
+});
 
 /**
  * Capture error with Sentry without logging to console
@@ -55,25 +47,6 @@ export function captureMessage(
   if (context) {
     Sentry.setContext("custom", context);
   }
-}
-
-/**
- * Express middleware for Sentry error tracking
- */
-export function sentryErrorMiddleware(
-  err: Error,
-  _req: Request,
-  _res: Response,
-  next: NextFunction
-) {
-  captureError(err, {
-    timestamp: new Date().toISOString(),
-    url: _req.originalUrl,
-    method: _req.method,
-    ip: _req.ip,
-  });
-
-  next(err);
 }
 
 /**

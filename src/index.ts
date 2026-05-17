@@ -1,10 +1,7 @@
 import ENV from "../db/env.ts";
 import app from "./app.ts";
 import { logger } from "./lib/logger.ts";
-import { initSentry, captureError } from "./lib/sentry.ts";
-
-// Initialize Sentry first for error tracking
-initSentry();
+import { captureError } from "./lib/sentry.ts";
 
 const rawPort = ENV.PORT;
 

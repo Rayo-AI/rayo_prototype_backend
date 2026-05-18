@@ -2,11 +2,13 @@ import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthR
 import { createToken, createTokenWithCustomExpiry, hashPassword, comparePassword } from "../lib/auth.ts";
 import { generateOTP, getOTPExpiry, hashOTP } from "../lib/otp.ts";
 import { logger } from "../lib/logger.ts";
+import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.ts";
 import { sendSignUpEmail, sendOTPEmail, sendPasswordResetEmail, sendSuccessfulResetEmail, sendResendResetLinkEmail } from "../services/email.ts";
 import { AuthUseCase } from "../usecases/auth.ts";
 import { appResponse } from "../utils/appResponse.ts";
 import { asyncHandler } from "../utils/asyncHandler.ts";
 import { ErrorResponse } from "../utils/errorResponse.ts";
+import passport from '../../db/google.ts';
 
 export const registerUser = asyncHandler(async (req, res) => {
   const parsed = AuthSignupBody.safeParse(req.body);
@@ -97,7 +99,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   return appResponse(res, 200, AuthLoginResponse.parse({ 
     token, 
-    user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased } 
+    user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, image: user.image } 
   }));
 });
 
@@ -147,7 +149,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = parsed.data;
 
   const user = await AuthUseCase.findUserByEmail(email);
-  if (!user || !(await comparePassword(password, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await comparePassword(password, user.passwordHash))) {
     throw new ErrorResponse("Invalid credentials", 401);
   }
 
@@ -156,7 +158,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   const token = await createToken({ userId: user.id });
-  return appResponse(res, 200, AuthLoginResponse.parse({ token, user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased } }));
+  return appResponse(res, 200, AuthLoginResponse.parse({ token, user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, image: user.image } }));
 });
 
 export const getAuthenticatedUser = asyncHandler(async (req, res) => {
@@ -170,7 +172,7 @@ export const getAuthenticatedUser = asyncHandler(async (req, res) => {
     throw new ErrorResponse("User not found", 401);
   }
 
-  return appResponse(res, 200, AuthMeResponse.parse({ id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased }));
+  return appResponse(res, 200, AuthMeResponse.parse({ id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, image: user.image }));
 });
 
 export const sendResetLink = asyncHandler(async (req, res) => {
@@ -292,5 +294,88 @@ export const updateMe = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     envelopeBased: user.envelopeBased,
+    image: user.image,
   }));
+});
+
+/**
+ * Google OAuth callback handler
+ * Called by Passport middleware after successful Google authentication
+ * Receives the authenticated user profile in req.user
+ */
+export const googleOAuthCallback = asyncHandler(async (req, res) => {
+  // Passport has already authenticated the user and populated req.user
+  const user = req.user as any;
+
+  if (!user || !user.id) {
+    throw new ErrorResponse("Failed to authenticate with Google", 500);
+  }
+
+  logger.info(`Google OAuth callback - User authenticated: ${user.email} (ID: ${user.id})`);
+
+  // Generate JWT token for the authenticated user
+  const token = await createToken({ userId: user.id });
+
+  return appResponse(res, 200, AuthLoginResponse.parse({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      envelopeBased: user.envelopeBased,
+      image: user.image
+    }
+  }));
+});
+
+/**
+ * Upload or update user profile image
+ */
+export const uploadProfileImage = asyncHandler(async (req, res) => {
+  const userId = (req as typeof req & { userId: number }).userId;
+
+  if (!req.file) {
+    throw new ErrorResponse("No image file provided", 400);
+  }
+
+  const user = await AuthUseCase.findUserById(userId);
+  if (!user) {
+    throw new ErrorResponse("User not found", 404);
+  }
+
+  // Generate a unique filename
+  const timestamp = Date.now();
+  const filename = `profile-${userId}-${timestamp}`;
+
+  // Upload to Cloudinary
+  const uploadResult = await uploadToCloudinary(req.file.buffer, filename, "rayo-finance/profiles");
+
+  if (!uploadResult.success) {
+    logger.error(`Failed to upload profile image for user ${userId}: ${uploadResult.error}`);
+    throw new ErrorResponse("Failed to upload image", 500);
+  }
+
+  // If user had a previous image, try to delete it from Cloudinary
+  if (user.image && user.googleImage !== user.image) {
+    // Extract public_id from the URL if it's a Cloudinary URL
+    const matches = user.image.match(/\/v\d+\/(.+?)\./);
+    if (matches && matches[1]) {
+      const publicId = `rayo-finance/profiles/${matches[1]}`;
+      await deleteFromCloudinary(publicId);
+    }
+  }
+
+  // Update user record with new image URL
+  const updatedUser = await AuthUseCase.updateUser(userId, { image: uploadResult.url });
+
+  if (!updatedUser) {
+    throw new ErrorResponse("Failed to update user profile", 500);
+  }
+
+  logger.info(`Profile image uploaded for user ${userId}: ${uploadResult.url}`);
+
+  return appResponse(res, 200, {
+    image: updatedUser.image,
+    message: "Profile image uploaded successfully",
+  });
 });

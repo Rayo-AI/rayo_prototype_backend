@@ -1,10 +1,12 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../lib/auth.ts"; 
 import { deleteBudget, getBudgets, setBudget } from "../handlers/budget.ts";
+import { budgetLimiter } from "../lib/rateLimiter.ts";
 
 const router: IRouter = Router();
 
 router.use(requireAuth);
+router.use(budgetLimiter);
 
 router.get("/budget", getBudgets);
 

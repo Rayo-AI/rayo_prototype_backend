@@ -1,28 +1,37 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../lib/auth.ts";
-import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resendVerificationOtp, resetPassword, sendResetLink, verifyOtp } from "../handlers/auth.ts";
-import { authLimiter } from "../lib/rateLimiter.ts";
+import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resendVerificationOtp, resetPassword, sendResetLink, verifyOtp, googleOAuthCallback, uploadProfileImage } from "../handlers/auth.ts";
+import { uploadSingleImage } from "../lib/multer.ts";
+import { authLimiter, signupLimiter } from "../lib/rateLimiter.ts";
+import passport from "../../db/google.ts";
 
 const router: IRouter = Router();
 
-router.use(authLimiter);
+// Signup has stricter limiter
+router.post("/auth/signup", signupLimiter, registerUser);
 
-router.post("/auth/signup", registerUser);
+// Auth operations use standard auth limiter
+router.post("/auth/verify-otp", authLimiter, verifyOtp);
 
-router.post("/auth/verify-otp", verifyOtp);
+router.post("/auth/resend-otp", authLimiter, resendVerificationOtp);
 
-router.post("/auth/resend-otp", resendVerificationOtp);
+router.post("/auth/login", authLimiter, loginUser);
 
-router.post("/auth/login", loginUser);
+// Google OAuth routes
+// 1. Start OAuth flow - redirects user to Google
+router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
-router.post("/auth/reset-password/:token", sendResetLink);
+// 2. Google OAuth callback - handled by Passport first, then our handler
+router.get("/auth/google/callback", passport.authenticate("google", { session: false, failureRedirect: "/login" }), googleOAuthCallback);
 
-router.patch("/auth/reset-password/confirm", resetPassword);
+router.post("/auth/reset-password/:token", authLimiter, sendResetLink);
 
-router.post("/auth/resend-reset", resendResetLink);
+router.patch("/auth/reset-password/confirm", authLimiter, resetPassword);
 
-// router.patch("/auth/update-password", updatePassword);
+router.post("/auth/resend-reset", authLimiter, resendResetLink);
 
 router.get("/auth/me", requireAuth, getAuthenticatedUser);
+
+router.post("/auth/upload-image", requireAuth, uploadSingleImage, uploadProfileImage);
 
 export default router;

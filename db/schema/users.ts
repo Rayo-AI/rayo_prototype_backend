@@ -6,13 +6,22 @@ export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"),
   envelopeBased: boolean("envelope_based").notNull().default(true), // ← false = zero-based, true = envelope
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationOTP: text("verification_otp"),
   verificationOTPExpiry: timestamp("verification_otp_expiry"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  
+  // Google OAuth fields
+  googleId: text("google_id").unique(),
+  googleEmail: text("google_email"),
+  googleImage: text("google_image"),
+  
+  // User profile image (can be from Google or user-uploaded)
+  image: text("image"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

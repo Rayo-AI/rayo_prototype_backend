@@ -9,10 +9,12 @@ import {
 } from "../../validation/index.ts";
 import { requireAuth } from "../lib/auth.ts";
 import { createSavingsGoal, deleteSavingsGoal, getSavingsGoals, updateSavingsGoal } from "../handlers/savings.ts";
+import { savingsLimiter } from "../lib/rateLimiter.ts";
 
 const router: IRouter = Router();
 
 router.use(requireAuth);
+router.use(savingsLimiter);
 
 router.get("/savings", getSavingsGoals);
 

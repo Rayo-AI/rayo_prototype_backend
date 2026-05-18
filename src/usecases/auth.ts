@@ -1,8 +1,19 @@
 import { AuthRepository } from "../repository/auth.ts";
 
 export class AuthUseCase {
-  static async signup(name: string, email: string, password: string) {
-    const newUser = await AuthRepository.createUser(name, email, password);
+  static async signup(
+    name: string, 
+    email: string, 
+    password: string | null, 
+    googleData?: {
+      googleId: string;
+      googleEmail: string;
+      googleImage?: string;
+      image?: string | null;
+      emailVerified?: boolean; 
+    }
+  ) {
+    const newUser = await AuthRepository.createUser(name, email, password, googleData);
     return newUser;
   }
 
@@ -26,12 +37,32 @@ export class AuthUseCase {
     return user;
   }
 
+  static async findUserByGoogleId(googleId: string) {
+    const user = await AuthRepository.findUserByGoogleId(googleId);
+    return user;
+  }
+
   static async updateUserPassword(userId: number, passwordHash: string) {
     const user = await AuthRepository.updateUserPassword(userId, passwordHash);
     return user;
   }
 
-  static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null, emailVerified?: boolean, verificationOTP?: string | null, verificationOTPExpiry?: Date | null }) {
+  static async updateUser(
+    userId: number, 
+    data: {
+      name?: string;
+      envelopeBased?: boolean;
+      resetToken?: string | null;
+      resetTokenExpiry?: Date | null;
+      emailVerified?: boolean;
+      verificationOTP?: string | null;
+      verificationOTPExpiry?: Date | null;
+      googleId?: string;
+      googleEmail?: string;
+      googleImage?: string;
+      image?: string | null;
+    }
+  ) {
     const user = await AuthRepository.updateUser(userId, data);
     return user;
   }

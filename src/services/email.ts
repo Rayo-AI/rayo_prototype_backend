@@ -35,8 +35,13 @@ if (!ENV.BREVO.API_KEY) {
   throw { success: false, error: "Email service not configured" };
 }
 
-if (!ENV.BREVO.EMAIL_FROM) {
+if (!ENV.EMAIL.FROM) {
   logger.error("EMAIL_FROM is not set");
+  throw { success: false, error: "Email service not configured" };
+}
+
+if (!ENV.EMAIL.SUPPORT) {
+  logger.error("EMAIL_SUPPORT is not set");
   throw { success: false, error: "Email service not configured" };
 }
 
@@ -56,7 +61,7 @@ export async function sendSignUpEmail(body: SignUpEmailBody): Promise<BrevoEmail
         "api-key": ENV.BREVO.API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: "Rayo AI", email: ENV.BREVO.EMAIL_FROM },
+        sender: { name: "Rayo AI", email: ENV.EMAIL.FROM },
         to: [{ email, name }],
         subject: "Welcome to Rayo AI - Your Personal Finance Assistant",
         htmlContent,
@@ -93,7 +98,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
         "api-key": ENV.BREVO.API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: "Rayo AI", email: ENV.BREVO.EMAIL_FROM },
+        sender: { name: "Rayo AI", email: ENV.EMAIL.FROM },
         to: [{ email }],
         subject: "Reset your Rayo AI password",
         htmlContent,
@@ -121,7 +126,8 @@ export async function sendOTPEmail(email: string, name: string, otp: string): Pr
     const htmlContent = await loadTemplate("otp.html", { 
       name,
       otp,
-      appUrl: appUrl
+      appUrl: appUrl,
+      expiryTime: "15 minutes"
     });
 
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -131,7 +137,7 @@ export async function sendOTPEmail(email: string, name: string, otp: string): Pr
         "api-key": ENV.BREVO.API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: "Rayo AI", email: ENV.BREVO.EMAIL_FROM },
+        sender: { name: "Rayo AI", email: ENV.EMAIL.FROM },
         to: [{ email, name }],
         subject: "Your Rayo AI Email Verification Code",
         htmlContent,
@@ -158,7 +164,8 @@ export async function sendResendResetLinkEmail(email: string, resetToken: string
   try {
     const htmlContent = await loadTemplate("resendResetPassword.html", { 
       resetUrl: appUrl,
-      token: resetToken
+      token: resetToken,
+      expiryTime: "15"
     });
 
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -168,7 +175,7 @@ export async function sendResendResetLinkEmail(email: string, resetToken: string
         "api-key": ENV.BREVO.API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: "Rayo AI", email: ENV.BREVO.EMAIL_FROM },
+        sender: { name: "Rayo AI", email: ENV.EMAIL.FROM },
         to: [{ email }],
         subject: "Your Rayo AI Password Reset Link",
         htmlContent,
@@ -193,7 +200,7 @@ export async function sendResendResetLinkEmail(email: string, resetToken: string
 export async function sendSuccessfulResetEmail(email: string): Promise<BrevoEmailResponse> {
   try {
     const htmlContent = await loadTemplate("successPasswordReset.html", {
-      appUrl: appUrl
+      emailSupport: ENV.EMAIL.SUPPORT || ""
     });
 
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -203,7 +210,7 @@ export async function sendSuccessfulResetEmail(email: string): Promise<BrevoEmai
         "api-key": ENV.BREVO.API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: "Rayo AI", email: ENV.BREVO.EMAIL_FROM },
+        sender: { name: "Rayo AI", email: ENV.EMAIL.FROM },
         to: [{ email }],
         subject: "Your Rayo AI Password Has Been Reset",
         htmlContent,

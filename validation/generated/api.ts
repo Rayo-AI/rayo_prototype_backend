@@ -48,7 +48,8 @@ export const VerifyOtpResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "envelopeBased": zod.boolean()
+  "envelopeBased": zod.boolean(),
+  "image": zod.string().nullish().describe('User profile image URL')
 })
 })
 
@@ -67,7 +68,8 @@ export const AuthLoginResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "envelopeBased": zod.boolean()
+  "envelopeBased": zod.boolean(),
+  "image": zod.string().nullish().describe('User profile image URL')
 })
 })
 
@@ -79,7 +81,8 @@ export const AuthMeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "envelopeBased": zod.boolean()
+  "envelopeBased": zod.boolean(),
+  "image": zod.string().nullish().describe('User profile image URL')
 })
 
 
@@ -91,14 +94,16 @@ export const AuthMeResponse = zod.object({
 
 export const UpdateMeBody = zod.object({
   "name": zod.string().min(1).optional(),
-  "envelopeBased": zod.boolean().optional()
+  "envelopeBased": zod.boolean().optional(),
+  "image": zod.string().nullish().describe('User profile image URL')
 })
 
 export const UpdateMeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "envelopeBased": zod.boolean()
+  "envelopeBased": zod.boolean(),
+  "image": zod.string().nullish().describe('User profile image URL')
 })
 
 

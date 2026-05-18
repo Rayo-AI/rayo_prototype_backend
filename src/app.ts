@@ -7,6 +7,7 @@ import { logger } from "./lib/logger.ts";
 import { errorHandler } from "./middlewares/errorHandler.ts";
 import { asyncHandler } from "./utils/asyncHandler.ts";
 import { apiLimiter } from "./lib/rateLimiter.ts";
+import passport from "../db/google.ts";
 
 const app: Express = express();
 
@@ -33,14 +34,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Initialize Passport for Google OAuth
+app.use(passport.initialize());
+
 // Apply rate limiting to all API routes
-app.use('/api/', apiLimiter);
+app.use('/api/v1/', apiLimiter);
 
 app.get("/", asyncHandler(async (req, res) => {
   res.json({ message: "Welcome to Rayo Finance API" });
 }));
 
-app.use("/api", Router);
+app.use("/api/v1", Router);
 
 function notFound(req: express.Request, _res: express.Response, next: express.NextFunction): void {
   const err = new Error(`Route not found: ${req.method} ${req.originalUrl}`) as Error & { statusCode: number };

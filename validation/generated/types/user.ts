@@ -11,4 +11,6 @@ export interface User {
   name: string;
   email: string;
   envelopeBased: boolean;
+  /** User profile image URL */
+  image?: string | null;
 }

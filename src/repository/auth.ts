@@ -27,8 +27,41 @@ export class AuthRepository {
     return user;
   }
 
-  static async createUser(name: string, email: string, passwordHash: string) {
-    const [user] = await db.insert(usersTable).values({ name, email, passwordHash }).returning();
+  static async findUserByGoogleId(googleId: string) {
+    logger.info(`Looking for user with Google ID: ${googleId}`);
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.googleId, googleId));
+    
+    if (!user) {
+      logger.info(`No user found with Google ID: ${googleId}`);
+      return null;
+    }
+
+    logger.info(`User found with Google ID: ${googleId}`);
+    return user;
+  }
+
+  static async createUser(
+    name: string, 
+    email: string, 
+    passwordHash: string | null,
+    googleData?: {
+      googleId: string;
+      googleEmail: string;
+      googleImage?: string;
+      image?: string | null;
+      emailVerified?: boolean;
+    }
+  ) {
+    const [user] = await db.insert(usersTable).values({
+      name,
+      email,
+      passwordHash,
+      googleId: googleData?.googleId,
+      googleEmail: googleData?.googleEmail,
+      googleImage: googleData?.googleImage,
+      image: googleData?.image,
+      emailVerified: googleData?.emailVerified ?? false,
+    }).returning();
     return user;
   }
 
@@ -43,7 +76,22 @@ export class AuthRepository {
     return user;
   }
 
-    static async updateUser(userId: number, data: { name?: string; envelopeBased?: boolean, resetToken?: string | null; resetTokenExpiry?: Date | null, emailVerified?: boolean, verificationOTP?: string | null, verificationOTPExpiry?: Date | null }) {
+  static async updateUser(
+    userId: number, 
+    data: {
+      name?: string;
+      envelopeBased?: boolean;
+      resetToken?: string | null;
+      resetTokenExpiry?: Date | null;
+      emailVerified?: boolean;
+      verificationOTP?: string | null;
+      verificationOTPExpiry?: Date | null;
+      googleId?: string;
+      googleEmail?: string;
+      googleImage?: string;
+      image?: string | null;
+    }
+  ) {
     const [user] = await db
       .update(usersTable)
       .set(data)

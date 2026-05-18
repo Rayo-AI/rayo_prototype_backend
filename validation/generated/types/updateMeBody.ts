@@ -10,4 +10,6 @@ export interface UpdateMeBody {
   /** @minLength 1 */
   name?: string;
   envelopeBased?: boolean;
+  /** User profile image URL */
+  image?: string | null;
 }

@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import { REFUSED } from 'node:dns';
 
 dotenv.config({ path: '.env.local' });  // takes priority
 dotenv.config({ path: '.env' });        // fallback
@@ -35,10 +34,21 @@ const ENV = {
   BREVO: {
     API_KEY: process.env.BREVO_API_KEY,
     SMTP_KEY: process.env.BREVO_SMTP_KEY,
-    EMAIL_FROM: process.env.EMAIL_FROM
+  },
+
+  EMAIL: {
+    FROM: process.env.EMAIL_FROM,
+    SUPPORT: process.env.EMAIL_SUPPORT,
   },
 
   SENTRY_DSN: process.env.SENTRY_DSN,
+
+  GOOGLE_OAUTH: {
+    CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI,
+    CALLBACK_URL: process.env.GOOGLE_OAUTH_CALLBACK_URL,
+  },
 }
 
 export default ENV;

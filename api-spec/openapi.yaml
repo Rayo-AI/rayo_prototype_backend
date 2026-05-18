@@ -656,6 +656,10 @@ components:
           type: string
         envelopeBased:
           type: boolean
+        image:
+          type: string
+          nullable: true
+          description: User profile image URL
       required:
         - id
         - name
@@ -670,6 +674,10 @@ components:
           minLength: 1
         envelopeBased:
           type: boolean
+        image:
+          type: string
+          nullable: true
+          description: User profile image URL
 
     AuthResponse:
       type: object

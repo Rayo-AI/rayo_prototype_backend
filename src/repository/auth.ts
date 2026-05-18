@@ -28,16 +28,20 @@ export class AuthRepository {
   }
 
   static async findUserByGoogleId(googleId: string) {
-    logger.info(`Looking for user with Google ID: ${googleId}`);
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.googleId, googleId));
-    
-    if (!user) {
-      logger.info(`No user found with Google ID: ${googleId}`);
-      return null;
-    }
+    const id = String(googleId); // ensure string regardless of what comes in
+    logger.info(`Looking for user with googleId: ${id}`);
 
-    logger.info(`User found with Google ID: ${googleId}`);
-    return user;
+    try {
+      return db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.googleId, id))
+        .limit(1)
+        .then(rows => rows[0] ?? null);
+    } catch (error: any) {
+      logger.error(`findUserByGoogleId failed for ID ${id}:`, error);
+      throw error; // let the caller handle it, don't silently swallow
+    }
   }
 
   static async createUser(
@@ -47,8 +51,7 @@ export class AuthRepository {
     googleData?: {
       googleId: string;
       googleEmail: string;
-      googleImage?: string;
-      image?: string | null;
+      profileImage?: string | null;
       emailVerified?: boolean;
     }
   ) {
@@ -58,8 +61,7 @@ export class AuthRepository {
       passwordHash,
       googleId: googleData?.googleId,
       googleEmail: googleData?.googleEmail,
-      googleImage: googleData?.googleImage,
-      image: googleData?.image,
+      profileImage: googleData?.profileImage || null,
       emailVerified: googleData?.emailVerified ?? false,
     }).returning();
     return user;
@@ -88,8 +90,7 @@ export class AuthRepository {
       verificationOTPExpiry?: Date | null;
       googleId?: string;
       googleEmail?: string;
-      googleImage?: string;
-      image?: string | null;
+      profileImage?: string | null;
     }
   ) {
     const [user] = await db

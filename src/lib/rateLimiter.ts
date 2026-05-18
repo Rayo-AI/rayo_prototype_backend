@@ -1,20 +1,19 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
 
 /**
  * Improved key generator for rate limiting
  * For authenticated users: tracks by userId to allow higher limits per user
- * For anonymous users: uses default IP-based tracking with proper IPv6 support
+ * For anonymous users: uses ipKeyGenerator for proper IPv6 support
  */
 const keyGeneratorWithUserTracking = (req: Request): string => {
   const userId = (req as any).userId;
   if (userId) {
     return `user:${userId}`;
   }
-  
-  // For anonymous users, use the default IP-based approach
-  // Don't try to extract IP ourselves - let express-rate-limit handle it
-  return req.ip || '';
+
+  // Use ipKeyGenerator instead of req.ip directly — handles IPv6 normalization
+  return ipKeyGenerator(req.ip ?? 'unknown');
 };
 
 // General API rate limiter - startup-friendly limits

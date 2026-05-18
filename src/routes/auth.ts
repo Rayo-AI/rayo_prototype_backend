@@ -4,6 +4,7 @@ import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resendV
 import { uploadSingleImage } from "../lib/multer.ts";
 import { authLimiter, signupLimiter } from "../lib/rateLimiter.ts";
 import passport from "../../db/google.ts";
+import ENV from "../../db/env.ts";
 
 const router: IRouter = Router();
 
@@ -17,12 +18,44 @@ router.post("/auth/resend-otp", authLimiter, resendVerificationOtp);
 
 router.post("/auth/login", authLimiter, loginUser);
 
-// Google OAuth routes
-// 1. Start OAuth flow - redirects user to Google
-router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+// 1. Start OAuth flow — capture frontend URLs in the OAuth state param
+//    Google will return this state unchanged in the callback
+router.get("/auth/google", (req, res, next) => {
+  const redirectUrl = (req.query.redirectUrl as string) || ENV.URL.FRONTEND + "/dashboard";
+  const errorUrl   = (req.query.errorUrl   as string) || ENV.URL.FRONTEND + "/auth/login";
 
-// 2. Google OAuth callback - handled by Passport first, then our handler
-router.get("/auth/google/callback", passport.authenticate("google", { session: false, failureRedirect: "/login" }), googleOAuthCallback);
+  // Encode both URLs as a JSON state string
+  const state = Buffer.from(JSON.stringify({ redirectUrl, errorUrl })).toString("base64");
+
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state,
+    session: false,
+  })(req, res, next);
+});
+
+// 2. Google OAuth callback — Passport authenticates, then our handler redirects
+router.get(
+  "/auth/google/callback",
+  (req, res, next) => {
+    // Decode state so we know where to send errors
+    const state = req.query.state as string | undefined;
+    let errorUrl = ENV.URL.FRONTEND + "/auth/login";
+
+    if (state) {
+      try {
+        const decoded = JSON.parse(Buffer.from(state, "base64").toString());
+        errorUrl = decoded.errorUrl || errorUrl;
+      } catch {}
+    }
+
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect: `${errorUrl}?error=oauth_failed`,
+    })(req, res, next);
+  },
+  googleOAuthCallback
+);
 
 router.post("/auth/reset-password/:token", authLimiter, sendResetLink);
 

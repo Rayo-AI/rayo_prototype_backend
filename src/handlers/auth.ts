@@ -8,7 +8,6 @@ import { AuthUseCase } from "../usecases/auth.ts";
 import { appResponse } from "../utils/appResponse.ts";
 import { asyncHandler } from "../utils/asyncHandler.ts";
 import { ErrorResponse } from "../utils/errorResponse.ts";
-import passport from '../../db/google.ts';
 
 export const registerUser = asyncHandler(async (req, res) => {
   const parsed = AuthSignupBody.safeParse(req.body);
@@ -99,7 +98,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   return appResponse(res, 200, AuthLoginResponse.parse({ 
     token, 
-    user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, image: user.image } 
+    user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, profileImage: user.profileImage } 
   }));
 });
 
@@ -158,7 +157,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   const token = await createToken({ userId: user.id });
-  return appResponse(res, 200, AuthLoginResponse.parse({ token, user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, image: user.image } }));
+  return appResponse(res, 200, AuthLoginResponse.parse({ token, user: { id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, profileImage: user.profileImage } }));
 });
 
 export const getAuthenticatedUser = asyncHandler(async (req, res) => {
@@ -172,7 +171,7 @@ export const getAuthenticatedUser = asyncHandler(async (req, res) => {
     throw new ErrorResponse("User not found", 401);
   }
 
-  return appResponse(res, 200, AuthMeResponse.parse({ id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, image: user.image }));
+  return appResponse(res, 200, AuthMeResponse.parse({ id: user.id, name: user.name, email: user.email, envelopeBased: user.envelopeBased, profileImage: user.profileImage }));
 });
 
 export const sendResetLink = asyncHandler(async (req, res) => {
@@ -294,7 +293,7 @@ export const updateMe = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     envelopeBased: user.envelopeBased,
-    image: user.image,
+    profileImage: user.profileImage,
   }));
 });
 
@@ -316,6 +315,14 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
   // Generate JWT token for the authenticated user
   const token = await createToken({ userId: user.id });
 
+  // Email the user about successful login via Google
+  const emailResult = await sendSignUpEmail({ email: user.email, name: user.name });
+
+  if (!emailResult.success) {
+    logger.error(`Failed to send Google login email to ${user.email}: ${emailResult.error}`);
+    // We won't fail the request if the email fails to send, but we should log it for monitoring
+  }
+
   return appResponse(res, 200, AuthLoginResponse.parse({
     token,
     user: {
@@ -323,7 +330,7 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       envelopeBased: user.envelopeBased,
-      image: user.image
+      profileImage: user.profileImage
     }
   }));
 });
@@ -343,11 +350,7 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
     throw new ErrorResponse("User not found", 404);
   }
 
-  // Generate a unique filename
-  const timestamp = Date.now();
-  const filename = `profile-${userId}-${timestamp}`;
-
-  // Upload to Cloudinary
+  const filename = `profile-${userId}-${Date.now()}`;
   const uploadResult = await uploadToCloudinary(req.file.buffer, filename, "rayo-finance/profiles");
 
   if (!uploadResult.success) {
@@ -355,18 +358,15 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Failed to upload image", 500);
   }
 
-  // If user had a previous image, try to delete it from Cloudinary
-  if (user.image && user.googleImage !== user.image) {
-    // Extract public_id from the URL if it's a Cloudinary URL
-    const matches = user.image.match(/\/v\d+\/(.+?)\./);
-    if (matches && matches[1]) {
-      const publicId = `rayo-finance/profiles/${matches[1]}`;
-      await deleteFromCloudinary(publicId);
+  // Delete previous image if it exists
+  if (user.profileImage) {
+    const matches = user.profileImage.match(/\/v\d+\/(.+?)\./);
+    if (matches?.[1]) {
+      await deleteFromCloudinary(matches[1]); // ✅ no folder prefix duplication
     }
   }
 
-  // Update user record with new image URL
-  const updatedUser = await AuthUseCase.updateUser(userId, { image: uploadResult.url });
+  const updatedUser = await AuthUseCase.updateUser(userId, { profileImage: uploadResult.url }); // ✅ consistent field
 
   if (!updatedUser) {
     throw new ErrorResponse("Failed to update user profile", 500);
@@ -374,8 +374,5 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
 
   logger.info(`Profile image uploaded for user ${userId}: ${uploadResult.url}`);
 
-  return appResponse(res, 200, {
-    image: updatedUser.image,
-    message: "Profile image uploaded successfully",
-  });
+  return appResponse(res, 200, { profileImage: updatedUser.profileImage });
 });

@@ -33,7 +33,7 @@ passport.use(
       try {
         console.log('Google profile:', profile);
 
-        const googleId = profile.id;
+        const googleId = String(profile.id);
         
         // Check if user already exists with this Google ID
         let user = await AuthRepository.findUserByGoogleId(googleId);
@@ -55,8 +55,7 @@ passport.use(
           user = await AuthRepository.updateUser(existingUser.id, {
             googleId,
             googleEmail: email,
-            googleImage: profile.photos?.[0]?.value,
-            image: profile.photos?.[0]?.value,
+            profileImage: profile.photos?.[0]?.value,
             emailVerified: true,
           });
           console.log('Google account linked to existing user:', existingUser.id);
@@ -69,8 +68,7 @@ passport.use(
             {
               googleId,
               googleEmail: email,
-              googleImage: profile.photos?.[0]?.value,
-              image: profile.photos?.[0]?.value,
+              profileImage: profile.photos?.[0]?.value,
               emailVerified: profile.emails?.[0]?.verified ?? true,
             }
           );

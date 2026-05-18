@@ -49,6 +49,12 @@ const ENV = {
     REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI,
     CALLBACK_URL: process.env.GOOGLE_OAUTH_CALLBACK_URL,
   },
+
+  CLOUDINARY: {
+    CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    API_KEY: process.env.CLOUDINARY_API_KEY,
+    API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  },
 }
 
 export default ENV;

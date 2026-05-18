@@ -3,7 +3,12 @@ import { logger } from './logger.ts';
 import ENV from '../../db/env.ts';
 
 if (!ENV.UPSTASH.REDIS_REST_URL || !ENV.UPSTASH.REDIS_REST_TOKEN) {
-  logger.warn('Upstash Redis credentials not configured - caching disabled');
+  const message = 'Upstash Redis credentials not configured - caching disabled';
+  if (ENV.NODE_ENV === 'development') {
+    logger.info(message);
+  } else {
+    logger.warn(message);
+  }
 }
 
 const redis = new Redis({
@@ -11,6 +16,6 @@ const redis = new Redis({
   token: ENV.UPSTASH.REDIS_REST_TOKEN,
 });
 
-logger.info('Upstash Redis client initialized');
+logger.debug('Upstash Redis client initialized');
 
 export default redis;

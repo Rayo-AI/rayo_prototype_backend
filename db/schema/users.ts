@@ -17,10 +17,9 @@ export const usersTable = pgTable("users", {
   // Google OAuth fields
   googleId: text("google_id").unique(),
   googleEmail: text("google_email"),
-  googleImage: text("google_image"),
   
   // User profile image (can be from Google or user-uploaded)
-  image: text("image"),
+  profileImage: text("profile_image"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

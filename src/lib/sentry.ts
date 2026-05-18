@@ -6,15 +6,24 @@ import ENV from "../../db/env.ts";
 Sentry.init({
   dsn: ENV.SENTRY_DSN,
   environment: ENV.NODE_ENV,
-  tracesSampleRate: 0.1, // Adjust this value in production
+  tracesSampleRate: ENV.NODE_ENV === "production" ? 0.1 : 0, // Disable tracing in development
   sendDefaultPii: true,
   attachStacktrace: true,
   debug: false, // Disable debug logging
+  enabled: ENV.NODE_ENV !== "development", // Disable Sentry entirely in development
+  beforeSend(event) {
+    // Skip sending events in development mode
+    if (ENV.NODE_ENV === "development") {
+      return null;
+    }
+    return event;
+  },
 });
 
 /**
  * Capture error with Sentry without logging to console
  * Used in error handlers and middleware to silently report errors
+ * In development mode, only logs to console without sending to Sentry
  */
 export function captureError(
   error: Error | string,
@@ -22,10 +31,12 @@ export function captureError(
   level: "fatal" | "error" | "warning" | "info" = "error"
 ) {
   if (ENV.NODE_ENV === "development") {
-    // In development, you can optionally log to console for debugging
-    console.error("[Sentry Captured]", error, context);
+    // In development, only log to console for debugging
+    console.error("[Dev Error]", error, context);
+    return;
   }
 
+  // In production, send to Sentry
   Sentry.captureException(error, {
     level,
     contexts: {
@@ -36,12 +47,20 @@ export function captureError(
 
 /**
  * Capture message with Sentry
+ * In development mode, only logs to console without sending to Sentry
  */
 export function captureMessage(
   message: string,
   level: "fatal" | "error" | "warning" | "info" = "error",
   context?: Record<string, any>
 ) {
+  if (ENV.NODE_ENV === "development") {
+    // In development, only log to console
+    console.log(`[Dev ${level.toUpperCase()}]`, message, context);
+    return;
+  }
+
+  // In production, send to Sentry
   Sentry.captureMessage(message, level);
 
   if (context) {

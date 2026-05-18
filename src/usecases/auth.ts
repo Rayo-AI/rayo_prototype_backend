@@ -8,8 +8,7 @@ export class AuthUseCase {
     googleData?: {
       googleId: string;
       googleEmail: string;
-      googleImage?: string;
-      image?: string | null;
+      profileImage?: string | null;
       emailVerified?: boolean; 
     }
   ) {
@@ -59,8 +58,7 @@ export class AuthUseCase {
       verificationOTPExpiry?: Date | null;
       googleId?: string;
       googleEmail?: string;
-      googleImage?: string;
-      image?: string | null;
+      profileImage?: string | null;
     }
   ) {
     const user = await AuthRepository.updateUser(userId, data);

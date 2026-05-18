@@ -5,8 +5,15 @@ import { appResponse } from "../utils/appResponse.ts";
 const router: IRouter = Router();
 
 router.get("/health", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
-  return appResponse(res, 200, data, "Health check successful");
+  const data = HealthCheckResponse.parse({
+    status: "ok",
+  });
+
+  appResponse(res, 200, {
+    data,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  }, "Health check successful");
 });
 
 export default router;

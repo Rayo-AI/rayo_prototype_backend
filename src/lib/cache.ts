@@ -1,5 +1,6 @@
 import redis from './redis.ts';
 import { logger } from './logger.ts';
+import ENV from '../../db/env.ts';
 
 /**
  * Get cached data or fetch fresh data and cache it
@@ -25,7 +26,12 @@ export async function getCached<T>(
     await redis.setex(key, ttl, JSON.stringify(data));
     return data;
   } catch (err) {
-    logger.warn({ err, key }, 'Cache error, falling back to fetch');
+    // In development, don't report cache errors to Sentry - just fall back to fetch
+    if (ENV.NODE_ENV === "development") {
+      logger.debug({ key }, 'Cache error in dev, falling back to fetch');
+    } else {
+      logger.warn({ err, key }, 'Cache error, falling back to fetch');
+    }
     // If cache fails, still return fresh data
     return fetchFn();
   }
@@ -43,7 +49,12 @@ export async function setCache<T>(
     await redis.setex(key, ttl, JSON.stringify(data));
     logger.debug({ key, ttl }, 'Cache set');
   } catch (err) {
-    logger.warn({ err, key }, 'Failed to set cache');
+    // In development, don't report cache errors to Sentry
+    if (ENV.NODE_ENV === "development") {
+      logger.debug({ key }, 'Failed to set cache in dev');
+    } else {
+      logger.warn({ err, key }, 'Failed to set cache');
+    }
   }
 }
 
@@ -55,7 +66,12 @@ export async function invalidateCache(key: string): Promise<void> {
     await redis.del(key);
     logger.debug({ key }, 'Cache invalidated');
   } catch (err) {
-    logger.warn({ err, key }, 'Failed to invalidate cache');
+    // In development, don't report cache errors to Sentry
+    if (ENV.NODE_ENV === "development") {
+      logger.debug({ key }, 'Failed to invalidate cache in dev');
+    } else {
+      logger.warn({ err, key }, 'Failed to invalidate cache');
+    }
   }
 }
 
@@ -68,9 +84,18 @@ export async function invalidateCachePattern(pattern: string): Promise<void> {
   try {
     // Upstash REST API limitation: KEYS command not available
     // For pattern invalidation, you need to track keys explicitly
-    logger.warn({ pattern }, 'Pattern invalidation not supported in Upstash REST API - use specific keys or maintain a list');
+    if (ENV.NODE_ENV === "development") {
+      logger.debug({ pattern }, 'Pattern invalidation not supported in Upstash REST API');
+    } else {
+      logger.warn({ pattern }, 'Pattern invalidation not supported in Upstash REST API - use specific keys or maintain a list');
+    }
   } catch (err) {
-    logger.warn({ err, pattern }, 'Failed to invalidate cache pattern');
+    // In development, don't report cache errors to Sentry
+    if (ENV.NODE_ENV === "development") {
+      logger.debug({ pattern }, 'Failed to invalidate cache pattern in dev');
+    } else {
+      logger.warn({ err, pattern }, 'Failed to invalidate cache pattern');
+    }
   }
 }
 
@@ -80,8 +105,17 @@ export async function invalidateCachePattern(pattern: string): Promise<void> {
  */
 export async function clearAllCache(): Promise<void> {
   try {
-    logger.warn('FLUSHDB not available in Upstash REST API - manual cache clear not supported');
+    if (ENV.NODE_ENV === "development") {
+      logger.debug('FLUSHDB not available in Upstash REST API');
+    } else {
+      logger.warn('FLUSHDB not available in Upstash REST API - manual cache clear not supported');
+    }
   } catch (err) {
-    logger.warn({ err }, 'Failed to clear all cache');
+    // In development, don't report cache errors to Sentry
+    if (ENV.NODE_ENV === "development") {
+      logger.debug('Failed to clear all cache in dev');
+    } else {
+      logger.warn({ err }, 'Failed to clear all cache');
+    }
   }
 }

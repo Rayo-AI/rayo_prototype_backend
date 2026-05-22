@@ -16,7 +16,7 @@ async function buildAll() {
 
   await esbuild({
     entryPoints: [
-      path.resolve(artifactDir, "src/instrument.ts"),
+      path.resolve(artifactDir, "src/sentry.ts"),
       path.resolve(artifactDir, "src/index.ts"),
     ],
     platform: "node",

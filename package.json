@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec tsx --import ./src/instrument.ts ./src/index.ts",
+    "dev": "nodemon --exec tsx --import ./src/sentry.ts ./src/index.ts",
     "build": "node ./build.js",
-    "start": "node --enable-source-maps --import ./dist/instrument.mjs ./dist/index.mjs",
+    "start": "node --enable-source-maps --import ./dist/sentry.mjs ./dist/index.mjs",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push --config ./drizzle.config.ts",
     "db:push-force": "drizzle-kit push --force --config ./drizzle.config.ts",

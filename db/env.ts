@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 
 if (process.env.NODE_ENV !== 'production') {
-  dotenv.config({ path: '.env.local' });  // takes priority
-  dotenv.config({ path: '.env' });        // fallback
+  dotenv.config({ path: '.env.local' });
+  dotenv.config({ path: '.env' });
 }
 
 const ENV = {

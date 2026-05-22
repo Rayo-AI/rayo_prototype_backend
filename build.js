@@ -15,7 +15,10 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/instrument.ts"),
+      path.resolve(artifactDir, "src/index.ts"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
@@ -68,6 +71,7 @@ async function buildAll() {
       "googleapis",
       "firebase-admin",
       "@parcel/watcher",
+      "@sentry/node",
       "@sentry/profiling-node",
       "@tree-sitter/*",
       "aws-sdk",
@@ -99,6 +103,7 @@ async function buildAll() {
       "playwright",
       "puppeteer",
       "puppeteer-core",
+      "express",
       "electron",
     ],
     sourcemap: "linked",

@@ -2,24 +2,6 @@ import * as Sentry from "@sentry/node";
 import type { Request, Response, NextFunction } from "express";
 import ENV from "../../db/env.ts";
 
-// Initialize Sentry
-Sentry.init({
-  dsn: ENV.SENTRY_DSN,
-  environment: ENV.NODE_ENV,
-  tracesSampleRate: ENV.NODE_ENV === "production" ? 0.1 : 0, // Disable tracing in development
-  sendDefaultPii: true,
-  attachStacktrace: true,
-  debug: false, // Disable debug logging
-  enabled: ENV.NODE_ENV !== "development", // Disable Sentry entirely in development
-  beforeSend(event) {
-    // Skip sending events in development mode
-    if (ENV.NODE_ENV === "development") {
-      return null;
-    }
-    return event;
-  },
-});
-
 /**
  * Capture error with Sentry without logging to console
  * Used in error handlers and middleware to silently report errors

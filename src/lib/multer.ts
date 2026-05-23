@@ -24,6 +24,7 @@ export const upload = multer({
   },
 });
 
+export const parseFormBody = upload.none();
 export const uploadSingleImage = upload.single("image");
 export const uploadMultipleImages = upload.array("images", 10); // Max 10 images
 

@@ -57,9 +57,9 @@ router.get(
   googleOAuthCallback
 );
 
-router.post("/auth/reset-password/:token", authLimiter, parseFormBody, sendResetLink);
+router.post("/auth/reset-password/", authLimiter, parseFormBody, sendResetLink);
 
-router.patch("/auth/reset-password/confirm", authLimiter, parseFormBody, resetPassword);
+router.patch("/auth/reset-password/:token", authLimiter, parseFormBody, resetPassword);
 
 router.post("/auth/resend-reset", authLimiter, parseFormBody, resendResetLink);
 

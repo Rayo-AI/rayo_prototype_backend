@@ -1,4 +1,4 @@
-import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthResetPasswordBody, AuthResetPasswordResponse, AuthUpdatePasswordBody, UpdateMeBody, VerifyOtpBody } from "../../validation/index.ts";
+import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthResetPasswordBody, AuthResetPasswordResponse, AuthResetPasswordWithTokenBody, UpdateMeBody, VerifyOtpBody } from "../../validation/index.ts";
 import { createToken, createTokenWithCustomExpiry, hashPassword, comparePassword } from "../lib/auth.ts";
 import { generateOTP, getOTPExpiry, hashOTP } from "../lib/otp.ts";
 import { logger } from "../lib/logger.ts";
@@ -199,18 +199,17 @@ export const sendResetLink = asyncHandler(async (req, res) => {
     // We won't fail the request if the email fails to send, but we should log it for monitoring
   }
 
-  logger.info(`Password reset link generated for user: ${user.email} (ID: ${user.id})`);
   return appResponse(res, 200, AuthResetPasswordResponse.parse({ message: "If that email exists, a reset link has been sent" }));
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {
-  const token = req.query.token as string;
+  const token = req.params.token as string;
   
   if (!token) {
     throw new ErrorResponse("Reset token is required", 400);
   }
 
-  const parsed = AuthUpdatePasswordBody.safeParse(req.body);
+  const parsed = AuthResetPasswordWithTokenBody.safeParse(req.body);
   if (!parsed.success) {
     throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
   }
@@ -273,7 +272,7 @@ export const resendResetLink = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Failed to resend reset link", 500);
   }
   
-  logger.info(`Password reset link resent for user: ${user.email} (ID: ${user.id} resetToken: ${resetToken})`);
+  logger.info(`Password reset link resent for user: ${user.email} (ID: ${user.id})`);
   return appResponse(res, 200, AuthResetPasswordResponse.parse({ message: "If that email exists, a reset link has been sent" }));
 });
 

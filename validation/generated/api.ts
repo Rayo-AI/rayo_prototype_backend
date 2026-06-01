@@ -132,21 +132,24 @@ export const AuthResendResetLinkResponse = zod.object({
 
 
 /**
- * @summary Update password using reset token
+ * @summary Reset password using token from reset link
  */
-export const authUpdatePasswordBodyNewPasswordMin = 8;
-
-export const authUpdatePasswordBodyConfirmPasswordMin = 8;
-
-
-
-export const AuthUpdatePasswordBody = zod.object({
-  "token": zod.string(),
-  "newPassword": zod.string().min(authUpdatePasswordBodyNewPasswordMin),
-  "confirmPassword": zod.string().min(authUpdatePasswordBodyConfirmPasswordMin)
+export const AuthResetPasswordWithTokenParams = zod.object({
+  "token": zod.coerce.string().describe('Reset token from the password reset email link')
 })
 
-export const AuthUpdatePasswordResponse = zod.object({
+export const authResetPasswordWithTokenBodyNewPasswordMin = 8;
+
+export const authResetPasswordWithTokenBodyConfirmPasswordMin = 8;
+
+
+
+export const AuthResetPasswordWithTokenBody = zod.object({
+  "newPassword": zod.string().min(authResetPasswordWithTokenBodyNewPasswordMin),
+  "confirmPassword": zod.string().min(authResetPasswordWithTokenBodyConfirmPasswordMin)
+})
+
+export const AuthResetPasswordWithTokenResponse = zod.object({
   "message": zod.string()
 })
 

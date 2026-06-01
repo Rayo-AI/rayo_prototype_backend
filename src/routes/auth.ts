@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../lib/auth.ts";
 import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resendVerificationOtp, resetPassword, sendResetLink, verifyOtp, googleOAuthCallback, uploadProfileImage } from "../handlers/auth.ts";
-import { parseFormBody, uploadSingleImage } from "../lib/multer.ts";
+import { uploadSingleImage } from "../lib/multer.ts";
 import { authLimiter, signupLimiter } from "../lib/rateLimiter.ts";
 import passport from "../../db/google.ts";
 import ENV from "../../db/env.ts";
@@ -9,14 +9,14 @@ import ENV from "../../db/env.ts";
 const router: IRouter = Router();
 
 // Signup has stricter limiter
-router.post("/auth/signup", signupLimiter, parseFormBody, registerUser);
+router.post("/auth/signup", signupLimiter, registerUser);
 
 // Auth operations use standard auth limiter
-router.post("/auth/verify-otp", authLimiter, parseFormBody, verifyOtp);
+router.post("/auth/verify-otp", authLimiter, verifyOtp);
 
-router.post("/auth/resend-otp", authLimiter, parseFormBody, resendVerificationOtp);
+router.post("/auth/resend-otp", authLimiter, resendVerificationOtp);
 
-router.post("/auth/login", authLimiter, parseFormBody, loginUser);
+router.post("/auth/login", authLimiter, loginUser);
 
 // 1. Start OAuth flow — capture frontend URLs in the OAuth state param
 //    Google will return this state unchanged in the callback
@@ -57,11 +57,11 @@ router.get(
   googleOAuthCallback
 );
 
-router.post("/auth/reset-password/", authLimiter, parseFormBody, sendResetLink);
+router.post("/auth/reset-password/", authLimiter, sendResetLink);
 
-router.patch("/auth/reset-password/:token", authLimiter, parseFormBody, resetPassword);
+router.patch("/auth/reset-password/:token", authLimiter, resetPassword);
 
-router.post("/auth/resend-reset", authLimiter, parseFormBody, resendResetLink);
+router.post("/auth/resend-reset", authLimiter, resendResetLink);
 
 router.get("/auth/me", requireAuth, getAuthenticatedUser);
 

@@ -10,13 +10,11 @@ import {
 import { requireAuth } from "../lib/auth.ts";
 import { createSavingsGoal, deleteSavingsGoal, getSavingsGoals, updateSavingsGoal } from "../handlers/savings.ts";
 import { savingsLimiter } from "../lib/rateLimiter.ts";
-import { parseFormBody } from "../lib/multer.ts";
 
 const router: IRouter = Router();
 
 router.use(requireAuth);
 router.use(savingsLimiter);
-router.use(parseFormBody);
 
 router.get("/savings", getSavingsGoals);
 

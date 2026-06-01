@@ -12,7 +12,7 @@ export class AuthRepository {
       return null;
     }
 
-    logger.info(`User found with email: ${email} user: ${user}`);
+    logger.info(`User found with email: ${email}`);
     return user;
   }
 
@@ -23,7 +23,7 @@ export class AuthRepository {
 
   static async findUserByToken(token: string) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.resetToken, token));
-    logger.info(`Looking for user with reset token: ${token}, found: ${user}`);
+    logger.info(`Reset token lookup: user ${user ? 'found' : 'not found'}`);
     return user;
   }
 
@@ -103,7 +103,7 @@ export class AuthRepository {
 
   static async findUserByOTP(otp: string) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.verificationOTP, otp));
-    logger.info(`Looking for user with verification OTP: ${otp}, found: ${user ? user.email : "none"}`);
+    logger.info(`OTP verification lookup: user ${user ? 'found' : 'not found'}`);
     return user;
   }
 }

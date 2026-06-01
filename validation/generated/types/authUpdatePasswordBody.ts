@@ -7,7 +7,6 @@
  */
 
 export interface AuthUpdatePasswordBody {
-  token: string;
   /** @minLength 8 */
   newPassword: string;
   /** @minLength 8 */

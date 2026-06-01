@@ -10,13 +10,11 @@ import { eq, and, gte, lte, SQL } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.ts";
 import { createTransaction, deleteMultipleTransactions, deleteTransaction, listTransactions, updateTransaction } from "../handlers/transactions.ts";
 import { transactionLimiter } from "../lib/rateLimiter.ts";
-import { parseFormBody } from "../lib/multer.ts";
 
 const router: IRouter = Router();
 
 router.use(requireAuth);
 router.use(transactionLimiter);
-router.use(parseFormBody);
 
 router.get("/transactions", listTransactions);
 

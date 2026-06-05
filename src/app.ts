@@ -49,6 +49,7 @@ app.use(passport.initialize());
 
 // Apply rate limiting to all API routes
 app.use('/api/v1/', apiLimiter);
+app.set("trust proxy", 1);
 
 app.get("/", asyncHandler(async (req, res) => {
   res.json({ message: "Welcome to Rayo Finance API" });

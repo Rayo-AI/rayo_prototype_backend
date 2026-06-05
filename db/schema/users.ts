@@ -20,6 +20,8 @@ export const usersTable = pgTable("users", {
   
   // User profile image (can be from Google or user-uploaded)
   profileImage: text("profile_image"),
+
+  onboardingComplete: boolean("onboarding_complete").notNull().default(false),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -39,43 +39,52 @@ passport.use(
         let user = await AuthRepository.findUserByGoogleId(googleId);
 
         if (user) {
-          return done(null, user);
+          return done(null, {
+            ...user,
+            isNewUser: false,
+          });
         }
 
-        // Check if user exists by email
         const email = profile.emails?.[0]?.value;
+
         if (!email) {
-          throw new Error('Google profile does not have an email');
+          throw new Error("Google profile does not have an email");
         }
 
         const existingUser = await AuthRepository.findUserByEmail(email);
-        
+
         if (existingUser) {
-          // Link Google account to existing user
           user = await AuthRepository.updateUser(existingUser.id, {
             googleId,
             googleEmail: email,
             profileImage: profile.photos?.[0]?.value,
             emailVerified: true,
           });
-          console.log('Google account linked to existing user:', existingUser.id);
-        } else {
-          // Create new user with Google data
-          user = await AuthRepository.createUser(
-            profile.displayName || profile.emails?.[0]?.value?.split('@')[0] || 'User',
-            email,
-            null, // No password hash for Google OAuth users
-            {
-              googleId,
-              googleEmail: email,
-              profileImage: profile.photos?.[0]?.value,
-              emailVerified: profile.emails?.[0]?.verified ?? true,
-            }
-          );
-          console.log('New user created via Google OAuth:', user.id);
+
+          return done(null, {
+            ...user,
+            isNewUser: false,
+          });
         }
 
-        return done(null, user);
+        user = await AuthRepository.createUser(
+          profile.displayName ||
+            profile.emails?.[0]?.value?.split("@")[0] ||
+            "User",
+          email,
+          null,
+          {
+            googleId,
+            googleEmail: email,
+            profileImage: profile.photos?.[0]?.value,
+            emailVerified: profile.emails?.[0]?.verified ?? true,
+          }
+        );
+
+        return done(null, {
+          ...user,
+          isNewUser: true,
+        });
       } catch (error) {
         console.error('Error during Google authentication:', error);
         return done(error);

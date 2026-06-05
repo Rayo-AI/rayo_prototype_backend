@@ -309,28 +309,56 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Failed to authenticate with Google", 500);
   }
 
-  logger.info(`Google OAuth callback - User authenticated: ${user.email} (ID: ${user.id})`);
+  logger.info(
+    `Google OAuth callback - User authenticated: ${user.email} (ID: ${user.id})`
+  );
 
-  const token = await createToken({ userId: user.id });
+  const token = await createToken({
+    userId: user.id,
+  });
 
-  const emailResult = await sendSignUpEmail({ email: user.email, name: user.name });
-  if (!emailResult.success) {
-    logger.error(`Failed to send Google login email to ${user.email}: ${emailResult.error}`);
+  // Send welcome email only for new users
+  if (user.isNewUser) {
+    const emailResult = await sendSignUpEmail({
+      email: user.email,
+      name: user.name,
+    });
+
+    if (!emailResult.success) {
+      logger.error(
+        `Failed to send signup email to ${user.email}: ${emailResult.error}`
+      );
+    }
   }
 
-  // Decode state to get redirectUrl
+  // Keep state decoding
   const state = req.query.state as string | undefined;
-  let redirectUrl = ENV.URL.FRONTEND + "/product/dashboard";
+
+  let frontendUrl = ENV.URL.FRONTEND;
 
   if (state) {
     try {
-      const decoded = JSON.parse(Buffer.from(state, "base64").toString());
-      redirectUrl = decoded.redirectUrl || redirectUrl;
-    } catch {}
+      const decoded = JSON.parse(
+        Buffer.from(state, "base64").toString()
+      );
+
+      // Optional: if you want to preserve frontend origin from state
+      if (decoded.redirectUrl) {
+        const url = new URL(decoded.redirectUrl);
+        frontendUrl = `${url.protocol}//${url.host}`;
+      }
+    } catch (err) {
+      logger.warn("Failed to decode OAuth state");
+    }
   }
 
-  // Redirect browser to frontend with token in URL
-  return res.redirect(`${redirectUrl}?token=${token}`);
+  const destination = user.isNewUser
+    ? "/auth/onboarding"
+    : "/product/dashboard";
+
+  return res.redirect(
+    `${frontendUrl}${destination}?token=${encodeURIComponent(token)}`
+  );
 });
 
 /**

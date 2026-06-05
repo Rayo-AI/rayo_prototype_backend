@@ -352,12 +352,19 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
     }
   }
 
+  res.cookie("authToken", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
   const destination = user.isNewUser
-    ? "/auth/onboarding"
+    ? "/product/onboarding/welcome"
     : "/product/dashboard";
 
   return res.redirect(
-    `${frontendUrl}${destination}?token=${encodeURIComponent(token)}`
+    `${ENV.URL.FRONTEND}${destination}`
   );
 });
 

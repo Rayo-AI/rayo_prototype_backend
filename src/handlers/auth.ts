@@ -8,6 +8,7 @@ import { AuthUseCase } from "../usecases/auth.ts";
 import { appResponse } from "../utils/appResponse.ts";
 import { asyncHandler } from "../utils/asyncHandler.ts";
 import { ErrorResponse } from "../utils/errorResponse.ts";
+import ENV from "../../db/env.ts";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const parsed = AuthSignupBody.safeParse(req.body);
@@ -302,7 +303,6 @@ export const updateMe = asyncHandler(async (req, res) => {
  * Receives the authenticated user profile in req.user
  */
 export const googleOAuthCallback = asyncHandler(async (req, res) => {
-  // Passport has already authenticated the user and populated req.user
   const user = req.user as any;
 
   if (!user || !user.id) {
@@ -311,27 +311,26 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
 
   logger.info(`Google OAuth callback - User authenticated: ${user.email} (ID: ${user.id})`);
 
-  // Generate JWT token for the authenticated user
   const token = await createToken({ userId: user.id });
 
-  // Email the user about successful login via Google
   const emailResult = await sendSignUpEmail({ email: user.email, name: user.name });
-
   if (!emailResult.success) {
     logger.error(`Failed to send Google login email to ${user.email}: ${emailResult.error}`);
-    // We won't fail the request if the email fails to send, but we should log it for monitoring
   }
 
-  return appResponse(res, 200, AuthLoginResponse.parse({
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      envelopeBased: user.envelopeBased,
-      profileImage: user.profileImage
-    }
-  }));
+  // Decode state to get redirectUrl
+  const state = req.query.state as string | undefined;
+  let redirectUrl = ENV.URL.FRONTEND + "/product/dashboard";
+
+  if (state) {
+    try {
+      const decoded = JSON.parse(Buffer.from(state, "base64").toString());
+      redirectUrl = decoded.redirectUrl || redirectUrl;
+    } catch {}
+  }
+
+  // Redirect browser to frontend with token in URL
+  return res.redirect(`${redirectUrl}?token=${token}`);
 });
 
 /**

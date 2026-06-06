@@ -22,6 +22,7 @@ export const usersTable = pgTable("users", {
   profileImage: text("profile_image"),
 
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),
+  incomeSource: text("income_source"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

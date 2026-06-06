@@ -155,6 +155,26 @@ export const AuthResetPasswordWithTokenResponse = zod.object({
 
 
 /**
+ * @summary Complete onboarding after signup
+ */
+export const OnboardingBody = zod.object({
+  "level": zod.enum(['beginner', 'intermediate', 'expert']),
+  "method": zod.enum(['envelope', 'zero-based', '50/30/20', 'other']),
+  "incomeSource": zod.string(),
+  "financialGoals": zod.array(zod.string()),
+  "categories": zod.array(zod.string())
+})
+
+export const OnboardingResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "envelopeBased": zod.boolean(),
+  "image": zod.string().nullish().describe('User profile image URL')
+})
+
+
+/**
  * @summary List all transactions
  */
 export const ListTransactionsQueryParams = zod.object({

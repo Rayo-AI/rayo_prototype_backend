@@ -1,4 +1,4 @@
-import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthResetPasswordBody, AuthResetPasswordResponse, AuthResetPasswordWithTokenBody, UpdateMeBody, VerifyOtpBody } from "../../validation/index.ts";
+import { AuthSignupBody, AuthLoginBody, AuthLoginResponse, AuthMeResponse, AuthResetPasswordBody, AuthResetPasswordResponse, AuthResetPasswordWithTokenBody, UpdateMeBody, VerifyOtpBody, OnboardingBody } from "../../validation/index.ts";
 import { createToken, createTokenWithCustomExpiry, hashPassword, comparePassword } from "../lib/auth.ts";
 import { generateOTP, getOTPExpiry, hashOTP } from "../lib/otp.ts";
 import { logger } from "../lib/logger.ts";
@@ -408,4 +408,54 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
   logger.info(`Profile image uploaded for user ${userId}: ${uploadResult.url}`);
 
   return appResponse(res, 200, { profileImage: updatedUser.profileImage });
+});
+
+export const completeOnboarding = asyncHandler(async (req, res) => {
+  // Extract userId exactly how your uploadProfileImage function does
+  const userId = (req as typeof req & { userId: number }).userId;
+
+  // Validation
+  const parsed = OnboardingBody.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
+  }
+
+  // Define fallback defaults since the frontend only provided names
+  const FALLBACK_LIMIT = "30000";
+  const defaultDeadline = () => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split("T")[0];
+  };
+
+  const formattedCategories = (parsed.data.categories || []).map((name) => ({
+    name,
+    monthlyLimit: FALLBACK_LIMIT,
+  }));
+
+  const formattedGoals = (parsed.data.financialGoals || []).map((name) => ({
+    name,
+    targetAmount: "0",
+    deadline: defaultDeadline(),
+  }));
+  // ------------------------------
+
+  try {
+    // Pass the newly formatted arrays to satisfy TypeScript and the UseCase
+    await AuthUseCase.onboardUser({
+      userId,
+      level: parsed.data.level,
+      method: parsed.data.method,
+      income: parsed.data.incomeSource,
+      goals: formattedGoals,
+      categories: formattedCategories,
+    });
+
+    logger.info(`User ${userId} successfully completed onboarding setup.`);
+
+    return appResponse(res, 200, { message: "Onboarding completed successfully" });
+  } catch (error) {
+    logger.error(`Failed to complete onboarding for user ${userId}: ${error}`);
+    throw new ErrorResponse("Failed to save financial setup", 500);
+  }
 });

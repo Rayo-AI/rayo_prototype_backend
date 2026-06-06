@@ -1,6 +1,26 @@
-import { db, usersTable } from "../../db/index.ts";
+import { budgetsTable, db, savingsGoalsTable, usersTable } from "../../db/index.ts";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.ts";
+
+export interface CategoryInput {
+  name: string;
+  monthlyLimit: string;
+}
+
+export interface GoalInput {
+  name: string;
+  targetAmount: string;
+  deadline: string;
+}
+
+export interface OnboardingPayload {
+  userId: number;
+  level: string;
+  method: string;
+  income: string;
+  goals: GoalInput[];
+  categories: CategoryInput[];
+}
 
 export class AuthRepository {
   static async findUserByEmail(email: string) {
@@ -105,5 +125,56 @@ export class AuthRepository {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.verificationOTP, otp));
     logger.info(`OTP verification lookup: user ${user ? 'found' : 'not found'}`);
     return user;
+  }
+
+  static async completeSetup(payload: OnboardingPayload) {
+    const { userId, method, income, goals, categories } = payload;
+
+    // Dynamically determine budgeting style based on the user's string
+    // If they picked "zero-based", envelopeBased is false. Otherwise, true.
+    const envelopeBased = method.toLowerCase() !== "zero-based";
+    const isZeroBased = !envelopeBased;
+
+    // Execute within a database transaction to ensure data integrity
+    await db.transaction(async (tx) => {
+      
+      // 1. Update user profile
+      await tx
+        .update(usersTable)
+        .set({
+          onboardingComplete: true,
+          envelopeBased,
+          incomeSource: income,
+        })
+        .where(eq(usersTable.id, userId));
+
+      // 2. Insert budget categories exactly as defined by the user
+      if (categories && categories.length > 0) {
+        const budgetRows = categories.map((cat) => ({
+          userId,
+          category: cat.name,
+          monthlyLimit: cat.monthlyLimit,
+          balance: "0",
+          rollover: !isZeroBased, // Zero-based generally implies no rollover
+        }));
+
+        await tx.insert(budgetsTable).values(budgetRows);
+      }
+
+      // 3. Insert savings goals exactly as defined by the user
+      if (goals && goals.length > 0) {
+        const goalRows = goals.map((goal) => ({
+          userId,
+          name: goal.name,
+          targetAmount: goal.targetAmount, 
+          currentAmount: "0",
+          deadline: goal.deadline, 
+        }));
+
+        await tx.insert(savingsGoalsTable).values(goalRows);
+      }
+    });
+
+    return true;
   }
 }

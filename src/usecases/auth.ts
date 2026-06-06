@@ -1,4 +1,4 @@
-import { AuthRepository } from "../repository/auth.ts";
+import { AuthRepository, OnboardingPayload } from "../repository/auth.ts";
 
 export class AuthUseCase {
   static async signup(
@@ -62,6 +62,11 @@ export class AuthUseCase {
     }
   ) {
     const user = await AuthRepository.updateUser(userId, data);
+    return user;
+  }
+
+  static async onboardUser(payload: OnboardingPayload) {
+    const user = await AuthRepository.completeSetup(payload);
     return user;
   }
 }

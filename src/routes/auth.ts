@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../lib/auth.ts";
-import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resendVerificationOtp, resetPassword, sendResetLink, verifyOtp, googleOAuthCallback, uploadProfileImage } from "../handlers/auth.ts";
+import { getAuthenticatedUser, loginUser, registerUser, resendResetLink, resendVerificationOtp, resetPassword, sendResetLink, verifyOtp, googleOAuthCallback, uploadProfileImage, completeOnboarding } from "../handlers/auth.ts";
 import { uploadSingleImage } from "../lib/multer.ts";
 import { authLimiter, signupLimiter } from "../lib/rateLimiter.ts";
 import passport from "../../db/google.ts";
@@ -66,5 +66,7 @@ router.post("/auth/resend-reset", authLimiter, resendResetLink);
 router.get("/auth/me", requireAuth, getAuthenticatedUser);
 
 router.post("/auth/upload-image", requireAuth, uploadSingleImage, uploadProfileImage);
+
+router.post("/onboarding", requireAuth, completeOnboarding);
 
 export default router;

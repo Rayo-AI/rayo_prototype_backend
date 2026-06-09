@@ -14,6 +14,8 @@ export interface Transaction {
   amount: number;
   category: string;
   description?: string;
+  institution?: string;
+  merchant?: string;
   date: string;
   createdAt: string;
 }

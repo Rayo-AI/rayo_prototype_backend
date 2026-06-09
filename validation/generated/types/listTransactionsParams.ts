@@ -14,4 +14,6 @@ type?: ListTransactionsType;
 startDate?: string;
 endDate?: string;
 amount?: number;
+institution?: string;
+merchant?: string;
 };

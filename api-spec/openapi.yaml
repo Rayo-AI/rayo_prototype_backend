@@ -309,6 +309,14 @@ paths:
           in: query
           schema:
             type: number
+        - name: institution
+          in: query
+          schema:
+            type: string
+        - name: merchant
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: List of transactions
@@ -840,6 +848,10 @@ components:
           type: string
         description:
           type: string
+        institution:
+          type: string
+        merchant:
+          type: string
         date:
           type: string
         createdAt:
@@ -865,6 +877,10 @@ components:
         category:
           type: string
           minLength: 1
+        institution:
+          type: string
+        merchant:
+          type: string
         description:
           type: string
         date:
@@ -892,7 +908,11 @@ components:
           type: string
         date:
           type: string
-
+        institution:
+          type: string
+        merchant:
+          type: string
+      
     DeleteTransactionsBody:
       type: object
       properties:

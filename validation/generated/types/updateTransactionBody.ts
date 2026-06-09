@@ -15,4 +15,6 @@ export interface UpdateTransactionBody {
   category?: string;
   description?: string;
   date?: string;
+  institution?: string;
+  merchant?: string;
 }

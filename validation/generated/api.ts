@@ -183,7 +183,9 @@ export const ListTransactionsQueryParams = zod.object({
   "type": zod.enum(['income', 'expense']).optional(),
   "startDate": zod.coerce.string().optional(),
   "endDate": zod.coerce.string().optional(),
-  "amount": zod.coerce.number().optional()
+  "amount": zod.coerce.number().optional(),
+  "institution": zod.coerce.string().optional(),
+  "merchant": zod.coerce.string().optional()
 })
 
 export const ListTransactionsResponseItem = zod.object({
@@ -193,6 +195,8 @@ export const ListTransactionsResponseItem = zod.object({
   "amount": zod.number(),
   "category": zod.string(),
   "description": zod.string().optional(),
+  "institution": zod.string().optional(),
+  "merchant": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
 })
@@ -212,6 +216,8 @@ export const CreateTransactionBody = zod.object({
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number().min(createTransactionBodyAmountMin),
   "category": zod.string().min(1),
+  "institution": zod.string().optional(),
+  "merchant": zod.string().optional(),
   "description": zod.string().optional(),
   "date": zod.string().min(1)
 })
@@ -245,7 +251,9 @@ export const UpdateTransactionBody = zod.object({
   "amount": zod.number().min(updateTransactionBodyAmountMin).optional(),
   "category": zod.string().min(1).optional(),
   "description": zod.string().optional(),
-  "date": zod.string().optional()
+  "date": zod.string().optional(),
+  "institution": zod.string().optional(),
+  "merchant": zod.string().optional()
 })
 
 export const UpdateTransactionResponse = zod.object({
@@ -255,6 +263,8 @@ export const UpdateTransactionResponse = zod.object({
   "amount": zod.number(),
   "category": zod.string(),
   "description": zod.string().optional(),
+  "institution": zod.string().optional(),
+  "merchant": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
 })
@@ -424,6 +434,8 @@ export const GetDashboardSummaryResponse = zod.object({
   "amount": zod.number(),
   "category": zod.string(),
   "description": zod.string().optional(),
+  "institution": zod.string().optional(),
+  "merchant": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
 }))

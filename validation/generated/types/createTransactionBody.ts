@@ -13,6 +13,8 @@ export interface CreateTransactionBody {
   amount: number;
   /** @minLength 1 */
   category: string;
+  institution?: string;
+  merchant?: string;
   description?: string;
   /** @minLength 1 */
   date: string;

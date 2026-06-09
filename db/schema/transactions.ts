@@ -14,6 +14,9 @@ export const transactionsTable = pgTable("transactions", {
   description: text("description").notNull().default(""),
   date: date("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  bill_type: text("bill_type").default(""),
+  institution: text("institution").default(""),
+  merchant: text("merchant").default(""),
 });
 
 export const insertTransactionSchema = createInsertSchema(transactionsTable).omit({ id: true, createdAt: true });

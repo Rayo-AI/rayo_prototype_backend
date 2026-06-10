@@ -67,6 +67,10 @@ export class TransactionRepository {
     return Number(result?.total ?? 0);
   }
 
+  static async getTransactionsSummary (userId: string) {
+
+  }
+
   // ── Row queries (pagination applies) ─────────────────────────────────────
 
   static async getTransactions(

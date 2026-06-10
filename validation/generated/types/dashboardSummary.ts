@@ -5,13 +5,23 @@
  * Rayo AI Personal Finance API
  * OpenAPI spec version: 0.1.0
  */
+import type { Budget } from './budget';
+import type { CategorySpending } from './categorySpending';
+import type { SavingsGoal } from './savingsGoal';
 import type { Transaction } from './transaction';
 
 export interface DashboardSummary {
   totalBalance: number;
+  totalIncome: number;
+  totalExpenses: number;
   monthlyIncome: number;
   monthlyExpenses: number;
-  budgetMonthlyLimit?: number;
-  budgetPercentUsed?: number;
+  monthlySavings: number;
+  budgetMonthlyLimit: number;
+  budgetPercentUsed: number;
+  budgets?: Budget[];
+  spendingByCategory: CategorySpending[];
   recentTransactions: Transaction[];
+  savingsRate: number;
+  savingsGoals: SavingsGoal[];
 }

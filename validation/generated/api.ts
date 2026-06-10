@@ -423,10 +423,29 @@ export const DeleteSavingsGoalParams = zod.object({
  */
 export const GetDashboardSummaryResponse = zod.object({
   "totalBalance": zod.number(),
+  "totalIncome": zod.number(),
+  "totalExpenses": zod.number(),
   "monthlyIncome": zod.number(),
   "monthlyExpenses": zod.number(),
-  "budgetMonthlyLimit": zod.number().optional(),
-  "budgetPercentUsed": zod.number().optional(),
+  "monthlySavings": zod.number(),
+  "budgetMonthlyLimit": zod.number(),
+  "budgetPercentUsed": zod.number(),
+  "budgets": zod.array(zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "category": zod.string(),
+  "monthlyLimit": zod.number(),
+  "totalSpent": zod.number(),
+  "remaining": zod.number(),
+  "percentUsed": zod.number(),
+  "rollover": zod.boolean(),
+  "balance": zod.number().optional()
+})).optional(),
+  "spendingByCategory": zod.array(zod.object({
+  "category": zod.string(),
+  "amount": zod.number(),
+  "percentage": zod.number()
+})),
   "recentTransactions": zod.array(zod.object({
   "id": zod.number(),
   "userId": zod.string(),
@@ -438,6 +457,16 @@ export const GetDashboardSummaryResponse = zod.object({
   "merchant": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
+})),
+  "savingsRate": zod.number(),
+  "savingsGoals": zod.array(zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "name": zod.string(),
+  "targetAmount": zod.number(),
+  "currentAmount": zod.number(),
+  "deadline": zod.string(),
+  "percentComplete": zod.number()
 }))
 })
 

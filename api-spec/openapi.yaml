@@ -610,7 +610,7 @@ paths:
       summary: Get dashboard summary
       responses:
         "200":
-          description: Dashboard summary with balance, income, expenses
+          description: Dashboard summary with balance, income, expenses, savings rate
           content:
             application/json:
               schema:
@@ -1042,23 +1042,51 @@ components:
       properties:
         totalBalance:
           type: number
+        totalIncome:         # ← Add this
+          type: number       # ← Add this
+        totalExpenses:       # ← Add this
+          type: number       # ← Add this
         monthlyIncome:
           type: number
         monthlyExpenses:
+          type: number
+        monthlySavings:
           type: number
         budgetMonthlyLimit:
           type: number
         budgetPercentUsed:
           type: number
+        budgets:
+          type: array
+          items:           
+            $ref: "#/components/schemas/Budget"   
+        spendingByCategory:
+          type: array
+          items:               
+            $ref: "#/components/schemas/CategorySpending" 
         recentTransactions:
           type: array
           items:
             $ref: "#/components/schemas/Transaction"
+        savingsRate:
+          type: number
+        savingsGoals:        
+          type: array
+          items:
+            $ref: "#/components/schemas/SavingsGoal" 
       required:
         - totalBalance
+        - totalIncome        # ← Add this
+        - totalExpenses      # ← Add this
         - monthlyIncome
         - monthlyExpenses
+        - monthlySavings
+        - savingsRate
+        - budgetMonthlyLimit
+        - budgetPercentUsed
+        - spendingByCategory
         - recentTransactions
+        - savingsGoals      
 
     CategorySpending:
       type: object

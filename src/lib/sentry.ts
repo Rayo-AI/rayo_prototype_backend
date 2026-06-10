@@ -12,13 +12,26 @@ export function captureError(
   context?: Record<string, any>,
   level: "fatal" | "error" | "warning" | "info" = "error"
 ) {
+  // Safely extract the message and stack whether 'error' is a string or an Error object
+  const safeMessage = typeof error === "string" ? error : error.message || "Unknown error";
+  const safeStack = typeof error === "string" ? undefined : error.stack;
+
   if (ENV.NODE_ENV === "development") {
-    // In development, only log to console for debugging
-    console.error("[Dev Error]", error, context);
+    // In development, only log safely to console for debugging
+    console.error(`[Dev Error]`, {
+      message: safeMessage,
+      stack: safeStack,
+      context
+    });
     return;
   }
 
-  // In production, send to Sentry
+  // In production, log safely and send to Sentry
+  console.error(`[${level.toUpperCase()}] Sentry Capture:`, {
+    message: safeMessage,
+    context
+  });
+
   Sentry.captureException(error, {
     level,
     contexts: {

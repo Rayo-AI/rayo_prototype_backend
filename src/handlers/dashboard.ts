@@ -3,6 +3,7 @@ import { getCached } from "../lib/cache";
 import { CACHE_KEYS, CACHE_TTL } from "../lib/cacheKeys";
 import { BudgetUseCase } from "../usecases/budget";
 import { TransactionUseCase } from "../usecases/transaction";
+import { SavingsUseCase } from "../usecases/savings";
 import { appResponse } from "../utils/appResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -31,72 +32,145 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
   const monthKey = `${start}-${end}`;
 
   const summary = await getCached(
-    CACHE_KEYS.dashboardMonth(userId, monthKey), async () => {
-    const [
-      incomeResult,
-      expenseResult,
-      allIncomeResult,
-      allExpenseResult,
-      budgets,
-      recentRows,
-    ] = await Promise.all([
-      TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end)),
-      TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end)),
-      TransactionUseCase.getAllTimeIncome(userId),
-      TransactionUseCase.getAllTimeExpenses(userId),
-      BudgetUseCase.getBudget(userId),
-      TransactionUseCase.getTransactions(userId, { limit: 5, page: 1 }),
-    ]);
+    CACHE_KEYS.dashboardMonth(userId, monthKey) + "_v2",
+    async () => {
+      const [
+        incomeResult,
+        expenseResult,
+        allIncomeResult,
+        allExpenseResult,
+        budgets,
+        recentRows,
+        categoryRows,   // ← must match Promise.all order
+        savingsGoals,   // ← moved to match position in Promise.all
+      ] = await Promise.all([
+        TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end)),
+        TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end)),
+        TransactionUseCase.getAllTimeIncome(userId),
+        TransactionUseCase.getAllTimeExpenses(userId),
+        BudgetUseCase.getBudget(userId),
+        TransactionUseCase.getTransactions(userId, { limit: 10, page: 1 }),
+        TransactionUseCase.getTransactionsByCategory(userId, {
+          start: new Date(start),
+          end: new Date(end),
+        }),
+        SavingsUseCase.getSavingsGoals(userId, {limit: 10, page: 1}),  // ← last, matches destructuring
+      ]);
 
-    const monthlyIncome = Math.round(toNumber(incomeResult) * 100) / 100;
-    const monthlyExpenses = Math.round(toNumber(expenseResult) * 100) / 100;
-    const totalIncome = Math.round(toNumber(allIncomeResult) * 100) / 100;
-    const totalExpenses = Math.round(toNumber(allExpenseResult) * 100) / 100;
-    const totalBalance = Math.round((totalIncome - totalExpenses) * 100) / 100;
+      // ── Balances ─────────────────────────────────────────────────────────
+      const monthlyIncome   = Math.round(toNumber(incomeResult)     * 100) / 100;
+      const monthlyExpenses = Math.round(toNumber(expenseResult)    * 100) / 100;
+      const totalIncome     = Math.round(toNumber(allIncomeResult)  * 100) / 100;
+      const totalExpenses   = Math.round(toNumber(allExpenseResult) * 100) / 100;
+      const totalBalance    = Math.round((totalIncome - totalExpenses) * 100) / 100;
+      const monthlySavings  = Math.round((monthlyIncome - monthlyExpenses) * 100) / 100;
+      const savingsRate     = monthlyIncome > 0
+        ? Math.round((monthlySavings / monthlyIncome) * 100 * 100) / 100
+        : totalIncome > 0
+          ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100 * 100) / 100
+          : 0;
 
-    // Aggregate across all budget categories
-    const budgetMonthlyLimit = budgets.rows.length > 0
-      ? Math.round(budgets.rows.reduce((sum, b) => sum + parseFloat(b.monthlyLimit), 0) * 100) / 100
-      : undefined;
-    const budgetPercentUsed = budgetMonthlyLimit
-      ? Math.round(Math.min(100, (monthlyExpenses / budgetMonthlyLimit) * 100) * 100) / 100
-      : undefined;
+      // ── Budgets ───────────────────────────────────────────────────────────
+     // ── Budgets ───────────────────────────────────────────────────────────
+      const mappedBudgets = budgets.rows.map(b => {
+        const limit = parseFloat(b.monthlyLimit);
+        // Find spent amount from categoryRows
+        const match = categoryRows.find(
+          c => c.category?.toLowerCase() === b.category?.toLowerCase()
+        );
+        const spent = match ? Number(match.amount) : 0;
 
-    const recentTransactions = recentRows.rows.map(t => ({
-      id: t.id,
-      userId: String(t.userId),
-      type: t.type,
-      amount: Math.round(parseFloat(t.amount) * 100) / 100,
-      category: t.category,
-      description: t.description,
-      date: t.date,
-      createdAt: t.createdAt.toISOString(),
-    }));
+        return {
+          id:           b.id,
+          category:     b.category,
+          monthlyLimit: Math.round(limit * 100) / 100,
+          percentUsed:  limit ? Math.round(Math.min(100, (spent / limit) * 100) * 100) / 100 : 0,
+          userId:       userId, // Pulled directly from the req context at the top of the function
+          totalSpent:   Math.round(spent * 100) / 100,
+          remaining:    Math.round((limit - spent) * 100) / 100,
+          rollover:     b.rollover || false // Assuming b.rollover exists on the raw DB row
+        };
+      });
 
-    return {
-      totalBalance,
-      monthlyIncome,
-      monthlyExpenses,
-      budgetMonthlyLimit,
-      budgetPercentUsed,
-      recentTransactions,
-    };
-  },
-  CACHE_TTL.MEDIUM // Cache for 5 minutes
-);
+      const budgetMonthlyLimit = mappedBudgets.length > 0
+        ? Math.round(mappedBudgets.reduce((sum, b) => sum + b.monthlyLimit, 0) * 100) / 100
+        : 0;
+        
+      const budgetPercentUsed = budgetMonthlyLimit > 0
+        ? Math.round(Math.min(100, (monthlyExpenses / budgetMonthlyLimit) * 100) * 100) / 100
+        : 0;
 
-  return appResponse(res, 200, GetDashboardSummaryResponse.parse(summary), "Dashboard summary retrieved successfully");
+
+      // ── Spending by category ──────────────────────────────────────────────
+      const spendingByCategory = categoryRows.map(r => ({
+        category:   r.category,
+        amount:     Math.round(Number(r.amount) * 100) / 100,
+        percentage: Math.round(Number(r.percentage) * 100) / 100,
+      }));
+
+      // ── Recent transactions ───────────────────────────────────────────────
+      const recentTransactions = recentRows.rows.map(t => ({
+        id:          t.id,
+        userId:      String(t.userId),
+        type:        t.type,
+        amount:      Math.round(parseFloat(t.amount) * 100) / 100,
+        category:    t.category,
+        description: t.description,
+        date:        t.date,
+        createdAt:   t.createdAt.toISOString(),
+      }));
+
+      // ── Savings goals ─────────────────────────────────────────────────────
+      const mappedSavings = (savingsGoals.rows ?? []).map(g => ({
+        id:              g.id,
+        name:            g.name,
+        targetAmount:    g.targetAmount,
+        currentAmount:   g.currentAmount,
+        deadline:        g.deadline,
+        percentComplete: g.percentComplete,
+        userId:          userId // Pulled directly from the req context!
+      }));
+
+      return {
+        totalBalance,
+        totalIncome,
+        totalExpenses,
+        monthlyIncome,
+        monthlyExpenses,
+        monthlySavings,
+        savingsRate,
+        budgetMonthlyLimit,
+        budgetPercentUsed,
+        budgets:            mappedBudgets,
+        spendingByCategory,
+        recentTransactions,
+        savingsGoals:       mappedSavings, 
+      };
+    },
+    CACHE_TTL.MEDIUM
+  );
+
+  console.log(summary);
+  
+  return appResponse(
+    res, 200,
+    GetDashboardSummaryResponse.parse(summary),
+    "Dashboard summary retrieved successfully"
+  );
 });
 
 export const dashboardSpendingByCategory = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const { start, end } = getCurrentMonthRange();
 
-  const rows = await TransactionUseCase.getTransactionsByCategory(userId, { start: new Date(start), end: new Date(end) });
+  const rows = await TransactionUseCase.getTransactionsByCategory(userId, {
+    start: new Date(start),
+    end:   new Date(end),
+  });
 
   const result = rows.map(r => ({
-    category: r.category,
-    amount: r.amount,
+    category:   r.category,
+    amount:     r.amount,
     percentage: r.percentage,
   }));
 

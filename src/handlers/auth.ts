@@ -305,67 +305,40 @@ export const updateMe = asyncHandler(async (req, res) => {
 export const googleOAuthCallback = asyncHandler(async (req, res) => {
   const user = req.user as any;
 
-  if (!user || !user.id) {
-    throw new ErrorResponse("Failed to authenticate with Google", 500);
-  }
-
-  logger.info(
-    `Google OAuth callback - User authenticated: ${user.email} (ID: ${user.id})`
-  );
-
-  const token = await createToken({
-    userId: user.id,
-  });
-
-  // Send welcome email only for new users
-  if (user.isNewUser) {
-    const emailResult = await sendSignUpEmail({
-      email: user.email,
-      name: user.name,
-    });
-
-    if (!emailResult.success) {
-      logger.error(
-        `Failed to send signup email to ${user.email}: ${emailResult.error}`
-      );
-    }
-  }
-
-  // Keep state decoding
   const state = req.query.state as string | undefined;
-
-  let frontendUrl = ENV.URL.FRONTEND;
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  let redirectUrl = frontendUrl + "/product/onboarding/welcome";
+  let errorUrl    = frontendUrl + "/auth/signup";
 
   if (state) {
     try {
-      const decoded = JSON.parse(
-        Buffer.from(state, "base64").toString()
-      );
-
-      // Optional: if you want to preserve frontend origin from state
-      if (decoded.redirectUrl) {
-        const url = new URL(decoded.redirectUrl);
-        frontendUrl = `${url.protocol}//${url.host}`;
-      }
-    } catch (err) {
-      logger.warn("Failed to decode OAuth state");
+      const decoded = JSON.parse(Buffer.from(state, "base64").toString());
+      redirectUrl = decoded.redirectUrl || redirectUrl;
+      errorUrl    = decoded.errorUrl    || errorUrl;
+    } catch {
+      logger.warn("Failed to parse OAuth state param");
     }
   }
 
-  res.cookie("authToken", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  if (!user || !user.id) {
+    logger.error("Google OAuth callback - No user in request");
+    return res.redirect(`${errorUrl}?error=oauth_failed`);
+  }
 
-  const destination = user.isNewUser
-    ? "/product/onboarding/welcome"
-    : "/product/dashboard";
+  try {
+    logger.info(`Google OAuth - ${user._isNew ? "New" : "Returning"} user: ${user.email}`);
+    const token = await createToken({ userId: user.id });
 
-  return res.redirect(
-    `${ENV.URL.FRONTEND}${destination}`
-  );
+    // New users → onboarding, returning users → dashboard
+    const destination = user._isNew
+      ? `${redirectUrl}?token=${encodeURIComponent(token)}&isNewUser=true`
+      : `${frontendUrl}/product/dashboard?token=${encodeURIComponent(token)}&isNewUser=false`;
+
+    return res.redirect(destination);
+  } catch (err: any) {
+    logger.error("Google OAuth - Token creation failed", err);
+    return res.redirect(`${errorUrl}?error=oauth_failed`);
+  }
 });
 
 /**

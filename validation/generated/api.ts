@@ -487,7 +487,7 @@ export const GetSpendingByCategoryResponse = zod.array(GetSpendingByCategoryResp
  */
 export const GetAiInsightsResponseItem = zod.object({
   "id": zod.string(),
-  "type": zod.enum(['warning', 'suggestion', 'alert', 'positive']),
+  "type": zod.enum(['warning', 'suggestion', 'alert', 'positive', 'observation']),
   "message": zod.string(),
   "detail": zod.string().optional()
 })
@@ -508,7 +508,7 @@ export const AskAiResponse = zod.object({
   "answer": zod.string(),
   "insights": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['warning', 'suggestion', 'alert', 'positive']),
+  "type": zod.enum(['warning', 'suggestion', 'alert', 'positive', 'observation']),
   "message": zod.string(),
   "detail": zod.string().optional()
 })).optional()

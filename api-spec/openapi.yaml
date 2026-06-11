@@ -1109,7 +1109,7 @@ components:
           type: string
         type:
           type: string
-          enum: [warning, suggestion, alert, positive]
+          enum: [warning, suggestion, alert, positive, observation]
         message:
           type: string
         detail:

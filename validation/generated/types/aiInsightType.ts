@@ -14,4 +14,5 @@ export const AiInsightType = {
   suggestion: 'suggestion',
   alert: 'alert',
   positive: 'positive',
+  observation: 'observation',
 } as const;

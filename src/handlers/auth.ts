@@ -307,14 +307,12 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
 
   const state = req.query.state as string | undefined;
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  let redirectUrl = frontendUrl + "/product/onboarding/welcome";
-  let errorUrl    = frontendUrl + "/auth/signup";
+  let errorUrl = frontendUrl + "/auth/signup";
 
   if (state) {
     try {
       const decoded = JSON.parse(Buffer.from(state, "base64").toString());
-      redirectUrl = decoded.redirectUrl || redirectUrl;
-      errorUrl    = decoded.errorUrl    || errorUrl;
+      errorUrl = decoded.errorUrl || errorUrl;
     } catch {
       logger.warn("Failed to parse OAuth state param");
     }
@@ -329,12 +327,11 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
     logger.info(`Google OAuth - ${user._isNew ? "New" : "Returning"} user: ${user.email}`);
     const token = await createToken({ userId: user.id });
 
-    // New users → onboarding, returning users → dashboard
-    const destination = user._isNew
-      ? `${redirectUrl}?token=${encodeURIComponent(token)}&isNewUser=true`
-      : `${frontendUrl}/product/dashboard?token=${encodeURIComponent(token)}&isNewUser=false`;
-
-    return res.redirect(destination);
+    // Always redirect back to the auth page (errorUrl's origin) —
+    // it's NOT a protected route, so middleware won't intercept it.
+    const isNewUser = user._isNew ? "true" : "false";
+    console.log(`Redirecting to ${errorUrl} with token for user ${user.email} (ID: ${user.id})`);
+    return res.redirect(`${errorUrl}?token=${encodeURIComponent(token)}&isNewUser=${isNewUser}`);
   } catch (err: any) {
     logger.error("Google OAuth - Token creation failed", err);
     return res.redirect(`${errorUrl}?error=oauth_failed`);

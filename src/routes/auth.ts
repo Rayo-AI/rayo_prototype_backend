@@ -5,6 +5,7 @@ import { uploadSingleImage } from "../lib/multer.ts";
 import { authLimiter, signupLimiter } from "../lib/rateLimiter.ts";
 import passport from "../../db/google.ts";
 import ENV from "../../db/env.ts";
+import { logger } from "../lib/logger.ts";
 
 const router: IRouter = Router();
 
@@ -21,10 +22,11 @@ router.post("/auth/login", authLimiter, loginUser);
 // 1. Start OAuth flow — capture frontend URLs in the OAuth state param
 //    Google will return this state unchanged in the callback
 router.get("/auth/google", (req, res, next) => {
+  logger.info(`GET /auth/google hit ${ JSON.stringify({ query: req.query }) }`);
+
   const redirectUrl = (req.query.redirectUrl as string) || ENV.URL.FRONTEND + "/dashboard";
   const errorUrl   = (req.query.errorUrl   as string) || ENV.URL.FRONTEND + "/auth/login";
 
-  // Encode both URLs as a JSON state string
   const state = Buffer.from(JSON.stringify({ redirectUrl, errorUrl })).toString("base64");
 
   passport.authenticate("google", {

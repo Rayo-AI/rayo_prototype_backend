@@ -33,6 +33,10 @@ const ENV = {
     API_NAME: process.env.GEMINI_API_NAME,
   },
 
+  MINSTRAL: {
+    API_KEY: process.env.MINSTRAL_API_KEY,
+  },
+
   BREVO: {
     API_KEY: process.env.BREVO_API_KEY,
     SMTP_KEY: process.env.BREVO_SMTP_KEY,

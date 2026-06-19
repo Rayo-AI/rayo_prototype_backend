@@ -1,10 +1,11 @@
 import {
   generateText,
-} from "../lib/ai/gemini";
+} from "../lib/ai/AIModel";
 
 import {
   buildInsightsPrompt,
   buildQuestionPrompt,
+  SYSTEM_PROMPT,
 } from "../lib/ai/prompts";
 
 import {
@@ -58,11 +59,9 @@ export class AiUseCase {
       });
 
     return generateText({
-      prompt,
-
-      temperature: roastMode
-        ? 0.75
-        : 0.5,
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: prompt,
+      temperature: roastMode ? 0.75 : 0.5,
     });
   }
 
@@ -81,16 +80,19 @@ export class AiUseCase {
 
     const text =
       await generateText({
-        prompt,
+        systemPrompt: SYSTEM_PROMPT,
+        userPrompt: prompt,
+        temperature: 0.4,
+        maxTokens: 800,
       });
 
     try {
-      return JSON.parse(
-        text.replace(
-          /```json|```/g,
-          ""
-        )
-      );
+      const cleaned = text
+        .replace(/```json/gi, "")
+        .replace(/```/g, "")
+        .trim();
+
+      return JSON.parse(cleaned);
     } catch {
       return [
         {

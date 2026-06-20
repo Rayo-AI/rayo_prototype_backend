@@ -17,6 +17,9 @@ export const createSavingsGoal = asyncHandler(async (req, res, next): Promise<vo
   if (!parsed.success) {
     throw next(new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors));
   }
+
+  console.log("Received create savings goal request with body:", body); // Debugging log
+  console.log("Parsed deadline:", req.body.deadline, parsed.data.deadline, typeof parsed.data.deadline); // Debugging log
   
   const savingsGoal = await SavingsUseCase.createSavingsGoal(userId, parsed.data.name, parsed.data.targetAmount, parsed.data.deadline);
   return appResponse(res, 201, savingsGoal, "Savings goal created successfully");
@@ -38,6 +41,7 @@ export const getSavingsGoals = asyncHandler(async (req, res, next) => {
   if (typeof query.deadlineAfter === "string") filters.deadlineAfter = query.deadlineAfter;
   
   const savingsGoals = await SavingsUseCase.getSavingsGoals(userId, filters);
+  console.log("Retrieved savings goals:", savingsGoals.rows); // Debugging log
   return appResponse(res, 200, ListSavingsGoalsResponse.parse(savingsGoals), "Savings goals retrieved successfully");
 });
 

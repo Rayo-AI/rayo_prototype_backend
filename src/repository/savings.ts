@@ -63,17 +63,23 @@ export class SavingsRepository {
   }
 
   static async createSavingsGoal(userId: number, name: string, targetAmount: number, deadline: string) {
-    const [saving] = await db
-      .insert(savingsGoalsTable)
-      .values({
-        userId,
-        name,
-        targetAmount: targetAmount.toString(),
-        currentAmount: "0",
-        deadline,
-      })
-      .returning();
-    return mapGoal(saving);
+   try {
+      const [saving] = await db
+        .insert(savingsGoalsTable)
+        .values({
+          userId,
+          name,
+          targetAmount: targetAmount.toString(),
+          currentAmount: "0",
+          deadline,
+        })
+        .returning();
+
+      return mapGoal(saving);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   static async updateSavingsGoal(userId: number, id: number, updates: Record<string, string>) {

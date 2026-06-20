@@ -188,7 +188,8 @@ export const ListTransactionsQueryParams = zod.object({
   "merchant": zod.coerce.string().optional()
 })
 
-export const ListTransactionsResponseItem = zod.object({
+export const ListTransactionsResponse = zod.object({
+  "rows": zod.array(zod.object({
   "id": zod.number(),
   "userId": zod.string(),
   "type": zod.enum(['income', 'expense']),
@@ -199,8 +200,16 @@ export const ListTransactionsResponseItem = zod.object({
   "merchant": zod.string().optional(),
   "date": zod.string(),
   "createdAt": zod.string()
+})).optional(),
+  "pagination": zod.object({
+  "total": zod.number().optional(),
+  "page": zod.number().optional(),
+  "limit": zod.number().optional(),
+  "totalPages": zod.number().optional(),
+  "hasNext": zod.boolean().optional(),
+  "hasPrev": zod.boolean().optional()
+}).optional()
 })
-export const ListTransactionsResponse = zod.array(ListTransactionsResponseItem)
 
 
 /**
@@ -347,7 +356,8 @@ export const ListSavingsGoalsQueryParams = zod.object({
   "limit": zod.coerce.number().min(1).optional()
 })
 
-export const ListSavingsGoalsResponseItem = zod.object({
+export const ListSavingsGoalsResponse = zod.object({
+  "rows": zod.array(zod.object({
   "id": zod.number(),
   "userId": zod.number(),
   "name": zod.string(),
@@ -355,8 +365,16 @@ export const ListSavingsGoalsResponseItem = zod.object({
   "currentAmount": zod.number(),
   "deadline": zod.string(),
   "percentComplete": zod.number()
+})).optional(),
+  "pagination": zod.object({
+  "total": zod.number().optional(),
+  "page": zod.number().optional(),
+  "limit": zod.number().optional(),
+  "totalPages": zod.number().optional(),
+  "hasNext": zod.boolean().optional(),
+  "hasPrev": zod.boolean().optional()
+}).optional()
 })
-export const ListSavingsGoalsResponse = zod.array(ListSavingsGoalsResponseItem)
 
 
 /**

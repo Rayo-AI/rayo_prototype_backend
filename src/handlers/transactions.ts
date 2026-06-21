@@ -69,16 +69,21 @@ export const listTransactions = asyncHandler(async (req, res) => {
     amount: query.data.amount,
   });
 
-  const transactions = rows.rows.map(t => ({
+  const transactions = {
+  rows: rows.rows.map(t => ({
     id: t.id,
     userId: String(t.userId),
     type: t.type,
     amount: parseFloat(t.amount),
     category: t.category,
     description: t.description,
+    institution: t.institution,
+    merchant: t.merchant,
     date: t.date,
     createdAt: t.createdAt.toISOString(),
-  }));
+  })),
+  pagination: rows.pagination,
+};
 
   return appResponse(res, 200, ListTransactionsResponse.parse(transactions));
 });

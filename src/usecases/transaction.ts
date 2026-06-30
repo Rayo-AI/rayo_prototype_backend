@@ -2,81 +2,77 @@ import { TransactionRepository } from "../repository/transactions";
 
 export class TransactionUseCase {
   static async getMonthlyIncome(userId: number, start: Date, end: Date) {
-    const incomeResult = await TransactionRepository.getMonthlyIncome(userId, start, end);
-    return incomeResult;
+    return TransactionRepository.getMonthlyIncome(userId, start, end);
   }
 
   static async getAllTimeIncome(userId: number) {
-    const incomeResult = await TransactionRepository.getAllTimeIncome(userId);
-    return incomeResult;
+    return TransactionRepository.getAllTimeIncome(userId);
   }
 
   static async getMonthlyExpenses(userId: number, start: Date, end: Date) {
-    const expenseResult = await TransactionRepository.getMonthlyExpenses(userId, start, end);
-    return expenseResult;
+    return TransactionRepository.getMonthlyExpenses(userId, start, end);
   }
 
   static async getAllTimeExpenses(userId: number) {
-    const expenseResult = await TransactionRepository.getAllTimeExpenses(userId);
-    return expenseResult;
+    return TransactionRepository.getAllTimeExpenses(userId);
   }
 
   static async getTransactionsByCategory(userId: number, filters: { start: Date, end: Date, limit?: number, page?: number }) {
-    const transactions = await TransactionRepository.getTransactionsByCategory(userId, filters);
-    return transactions;
+    return TransactionRepository.getTransactionsByCategory(userId, filters);
   }
 
   static async getTransactions(
     userId: number,
     filters: {
-      category?: string;
+      categoryId?: number;
+      parentSlug?: string;
       type?: string;
-      startDate?: Date;    
-      endDate?: Date;     
+      startDate?: Date;
+      endDate?: Date;
       limit?: number;
       orderBy?: "date" | "amount";
-      description?: string;  
-      amount?: number; 
-      page?: number;     
+      description?: string;
+      amount?: number;
+      page?: number;
     } = {}
   ) {
-    return await TransactionRepository.getTransactions(userId, filters);
+    return TransactionRepository.getTransactions(userId, filters);
   }
 
   static async createTransaction(userId: number, data: {
-    type: "income" | "expense",
-    amount: string,
-    category: string,
-    description?: string,
-    date: string | Date,
+    type: "income" | "expense";
+    amount: string;
+    categoryId: number;
+    description?: string;
+    date: string | Date;
+    institution?: string;
+    merchant?: string;
+    bill_type?: string;
   }) {
-    const transaction = await TransactionRepository.createTransaction(userId, data);
-    return transaction;
+    return TransactionRepository.createTransaction(userId, data);
   }
 
   static async deleteTransaction(userId: number, transactionId: number) {
-    const deleted = await TransactionRepository.deleteTransaction(userId, transactionId);
-    return deleted;
+    return TransactionRepository.deleteTransaction(userId, transactionId);
   }
 
   static async deleteMultipleTransactions(userId: number, transactionIds: number[]) {
-    const deleted = await TransactionRepository.deleteMultipleTransactions(userId, transactionIds);
-    return deleted;
+    return TransactionRepository.deleteMultipleTransactions(userId, transactionIds);
   }
 
   static async updateTransaction(userId: number, transactionId: number, data: {
-    type?: "income" | "expense",
-    amount?: string,
-    category?: string,
-    description?: string,
-    date?: string | Date,
+    type?: "income" | "expense";
+    amount?: string;
+    categoryId?: number;
+    description?: string;
+    date?: string | Date;
+    institution?: string;
+    merchant?: string;
   }) {
-    const updated = await TransactionRepository.updateTransaction(userId, transactionId, data);
-    return updated;
+    return TransactionRepository.updateTransaction(userId, transactionId, data);
   }
 
-  static async getSpentByCategory(userId: number, category: string, start: string, end: string) {
-    const spentAmount = await TransactionRepository.getSpentByCategory(userId, category, start, end);
-    return spentAmount;
+  static async getSpentByParentSlug(userId: number, parentSlug: string, start: string, end: string) {
+    return TransactionRepository.getSpentByParentSlug(userId, parentSlug, start, end);
   }
 }

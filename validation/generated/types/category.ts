@@ -6,8 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CategorySpending {
-  categoryId: number;
-  amount: number;
-  percentage: number;
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  parentSlug: string;
+  emoji?: string;
+  isSystem: boolean;
 }

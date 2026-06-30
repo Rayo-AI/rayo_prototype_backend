@@ -11,8 +11,8 @@ export interface UpdateTransactionBody {
   type?: UpdateTransactionBodyType;
   /** @minimum 0.01 */
   amount?: number;
-  /** @minLength 1 */
-  category?: string;
+  /** @minimum 1 */
+  categoryId?: number;
   description?: string;
   date?: string;
   institution?: string;

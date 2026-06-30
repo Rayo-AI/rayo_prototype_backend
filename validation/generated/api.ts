@@ -194,7 +194,7 @@ export const ListTransactionsResponse = zod.object({
   "userId": zod.string(),
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number(),
-  "category": zod.string(),
+  "categoryId": zod.number(),
   "description": zod.string().optional(),
   "institution": zod.string().optional(),
   "merchant": zod.string().optional(),
@@ -224,7 +224,9 @@ export const createTransactionBodyAmountMin = 0.01;
 export const CreateTransactionBody = zod.object({
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number().min(createTransactionBodyAmountMin),
-  "category": zod.string().min(1),
+  "categoryId": zod.number().min(1).optional(),
+  "category": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
   "institution": zod.string().optional(),
   "merchant": zod.string().optional(),
   "description": zod.string().optional(),
@@ -258,7 +260,7 @@ export const updateTransactionBodyAmountMin = 0.01;
 export const UpdateTransactionBody = zod.object({
   "type": zod.enum(['income', 'expense']).optional(),
   "amount": zod.number().min(updateTransactionBodyAmountMin).optional(),
-  "category": zod.string().min(1).optional(),
+  "categoryId": zod.number().min(1).optional(),
   "description": zod.string().optional(),
   "date": zod.string().optional(),
   "institution": zod.string().optional(),
@@ -270,7 +272,7 @@ export const UpdateTransactionResponse = zod.object({
   "userId": zod.string(),
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number(),
-  "category": zod.string(),
+  "categoryId": zod.number(),
   "description": zod.string().optional(),
   "institution": zod.string().optional(),
   "merchant": zod.string().optional(),
@@ -293,7 +295,9 @@ export const DeleteTransactionParams = zod.object({
 export const GetBudgetResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
-  "category": zod.string(),
+  "categoryId": zod.number().optional(),
+  "categoryName": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
@@ -316,7 +320,9 @@ export const upsertBudgetBodyBalanceMin = 0;
 
 
 export const UpsertBudgetBody = zod.object({
-  "category": zod.string().min(1),
+  "categoryId": zod.number().min(1).optional(),
+  "category": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number().min(upsertBudgetBodyMonthlyLimitMin),
   "rollover": zod.boolean().default(upsertBudgetBodyRolloverDefault),
   "balance": zod.number().min(upsertBudgetBodyBalanceMin).optional()
@@ -325,7 +331,9 @@ export const UpsertBudgetBody = zod.object({
 export const UpsertBudgetResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
-  "category": zod.string(),
+  "categoryId": zod.number().optional(),
+  "categoryName": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
@@ -356,11 +364,16 @@ export const ListSavingsGoalsQueryParams = zod.object({
   "limit": zod.coerce.number().min(1).optional()
 })
 
+
+
+
 export const ListSavingsGoalsResponse = zod.object({
   "rows": zod.array(zod.object({
   "id": zod.number(),
   "userId": zod.number(),
   "name": zod.string(),
+  "categoryId": zod.number().min(1),
+  "goalType": zod.enum(['PERSONAL', 'GROUP', 'AJO']),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "deadline": zod.string(),
@@ -381,18 +394,19 @@ export const ListSavingsGoalsResponse = zod.object({
  * @summary Create a savings goal
  */
 
+
 export const createSavingsGoalBodyTargetAmountMin = 0.01;
-
-export const createSavingsGoalBodyCurrentAmountMin = 0;
-
 
 
 
 export const CreateSavingsGoalBody = zod.object({
   "name": zod.string().min(1),
+  "categoryId": zod.number().min(1).optional(),
+  "category": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
+  "goalType": zod.enum(['PERSONAL', 'GROUP', 'AJO']).optional(),
   "targetAmount": zod.number().min(createSavingsGoalBodyTargetAmountMin),
-  "currentAmount": zod.number().min(createSavingsGoalBodyCurrentAmountMin).optional(),
-  "deadline": zod.string().min(1)
+  "deadline": zod.coerce.date()
 })
 
 
@@ -404,23 +418,30 @@ export const UpdateSavingsGoalParams = zod.object({
 })
 
 
-export const updateSavingsGoalBodyTargetAmountMin = 0.01;
-
 export const updateSavingsGoalBodyCurrentAmountMin = 0;
 
 
 
 export const UpdateSavingsGoalBody = zod.object({
-  "name": zod.string().min(1).optional(),
-  "targetAmount": zod.number().min(updateSavingsGoalBodyTargetAmountMin).optional(),
+  "name": zod.string().optional(),
+  "categoryId": zod.number().min(1).optional(),
+  "category": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
+  "goalType": zod.enum(['PERSONAL', 'GROUP', 'AJO']).optional(),
+  "targetAmount": zod.number().optional(),
   "currentAmount": zod.number().min(updateSavingsGoalBodyCurrentAmountMin).optional(),
-  "deadline": zod.string().optional()
+  "deadline": zod.coerce.date().optional()
 })
+
+
+
 
 export const UpdateSavingsGoalResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
   "name": zod.string(),
+  "categoryId": zod.number().min(1),
+  "goalType": zod.enum(['PERSONAL', 'GROUP', 'AJO']),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "deadline": zod.string(),
@@ -437,8 +458,34 @@ export const DeleteSavingsGoalParams = zod.object({
 
 
 /**
+ * @summary List all categories
+ */
+export const ListCategoriesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "parentSlug": zod.string(),
+  "emoji": zod.string().optional(),
+  "isSystem": zod.boolean()
+})
+export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem)
+
+
+/**
+ * @summary Create a new category
+ */
+export const CreateCategoryBody = zod.object({
+  "name": zod.string(),
+  "parentSlug": zod.string()
+})
+
+
+/**
  * @summary Get dashboard summary
  */
+
+
+
 export const GetDashboardSummaryResponse = zod.object({
   "totalBalance": zod.number(),
   "totalIncome": zod.number(),
@@ -451,7 +498,9 @@ export const GetDashboardSummaryResponse = zod.object({
   "budgets": zod.array(zod.object({
   "id": zod.number(),
   "userId": zod.number(),
-  "category": zod.string(),
+  "categoryId": zod.number().optional(),
+  "categoryName": zod.string().optional(),
+  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
@@ -460,7 +509,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "balance": zod.number().optional()
 })).optional(),
   "spendingByCategory": zod.array(zod.object({
-  "category": zod.string(),
+  "categoryId": zod.number(),
   "amount": zod.number(),
   "percentage": zod.number()
 })),
@@ -469,7 +518,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "userId": zod.string(),
   "type": zod.enum(['income', 'expense']),
   "amount": zod.number(),
-  "category": zod.string(),
+  "categoryId": zod.number(),
   "description": zod.string().optional(),
   "institution": zod.string().optional(),
   "merchant": zod.string().optional(),
@@ -481,6 +530,8 @@ export const GetDashboardSummaryResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
   "name": zod.string(),
+  "categoryId": zod.number().min(1),
+  "goalType": zod.enum(['PERSONAL', 'GROUP', 'AJO']),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "deadline": zod.string(),
@@ -493,7 +544,7 @@ export const GetDashboardSummaryResponse = zod.object({
  * @summary Get spending grouped by category
  */
 export const GetSpendingByCategoryResponseItem = zod.object({
-  "category": zod.string(),
+  "categoryId": zod.number(),
   "amount": zod.number(),
   "percentage": zod.number()
 })

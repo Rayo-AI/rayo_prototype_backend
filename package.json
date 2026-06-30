@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push --config ./drizzle.config.ts",
     "db:push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "codegen": "orval --config orval.config.ts"
+    "codegen": "orval --config orval.config.ts",
+    "seed": "tsx db/seed/run.ts"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

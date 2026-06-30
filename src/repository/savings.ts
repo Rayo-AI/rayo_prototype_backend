@@ -1,3 +1,4 @@
+// repository/savings.ts
 import { and, asc, count, eq, gte, ilike, lte, SQL } from "drizzle-orm";
 import { db, savingsGoalsTable } from "../../db";
 
@@ -8,6 +9,8 @@ function mapGoal(g: typeof savingsGoalsTable.$inferSelect) {
     id: g.id,
     userId: g.userId,
     name: g.name,
+    categoryId: g.categoryId,
+    goalType: g.goalType,
     targetAmount: target,
     currentAmount: current,
     deadline: g.deadline,
@@ -16,13 +19,16 @@ function mapGoal(g: typeof savingsGoalsTable.$inferSelect) {
 }
 
 export class SavingsRepository {
-  static async getSavingsGoals(userId: number, filters: {
-    name?: string;
-    deadlineBefore?: string;
-    deadlineAfter?: string;
-    limit?: number;
-    page?: number;
-  } = {}) {
+  static async getSavingsGoals(
+    userId: number,
+    filters: {
+      name?: string;
+      deadlineBefore?: string;
+      deadlineAfter?: string;
+      limit?: number;
+      page?: number;
+    } = {}
+  ) {
     const limit = filters.limit ?? 20;
     const offset = ((filters.page ?? 1) - 1) * limit;
     const conditions: SQL[] = [eq(savingsGoalsTable.userId, userId)];
@@ -62,33 +68,49 @@ export class SavingsRepository {
     };
   }
 
-  static async createSavingsGoal(userId: number, name: string, targetAmount: number, deadline: string) {
-   try {
-      const [saving] = await db
-        .insert(savingsGoalsTable)
-        .values({
-          userId,
-          name,
-          targetAmount: targetAmount.toString(),
-          currentAmount: "0",
-          deadline,
-        })
-        .returning();
-
-      return mapGoal(saving);
-    } catch (error) {
-      console.error(error);
-      throw error;
+  static async createSavingsGoal(
+    userId: number,
+    data: {
+      name: string;
+      categoryId: number;
+      goalType?: "PERSONAL" | "GROUP" | "AJO";
+      targetAmount: number;
+      deadline: string;
     }
+  ) {
+    const [saving] = await db
+      .insert(savingsGoalsTable)
+      .values({
+        userId,
+        name: data.name,
+        categoryId: data.categoryId,
+        goalType: data.goalType ?? "PERSONAL",
+        targetAmount: data.targetAmount.toString(),
+        currentAmount: "0",
+        deadline: data.deadline,
+      })
+      .returning();
+    return mapGoal(saving);
   }
 
-  static async updateSavingsGoal(userId: number, id: number, updates: Record<string, string>) {
+  static async updateSavingsGoal(
+    userId: number,
+    id: number,
+    updates: Partial<{
+      name: string;
+      categoryId: number;
+      goalType: "PERSONAL" | "GROUP" | "AJO";
+      targetAmount: string;
+      currentAmount: string;
+      deadline: string;
+    }>
+  ) {
     const [saving] = await db
       .update(savingsGoalsTable)
       .set(updates)
       .where(and(eq(savingsGoalsTable.id, id), eq(savingsGoalsTable.userId, userId)))
       .returning();
-    return mapGoal(saving);
+    return saving ? mapGoal(saving) : undefined;
   }
 
   static async deleteSavingsGoal(userId: number, id: number) {
@@ -96,6 +118,38 @@ export class SavingsRepository {
       .delete(savingsGoalsTable)
       .where(and(eq(savingsGoalsTable.id, id), eq(savingsGoalsTable.userId, userId)))
       .returning();
-    return mapGoal(saving);
+    return saving ? mapGoal(saving) : undefined;
+  }
+
+  static async findByCategoryId(userId: number, categoryId: number) {
+    const [goal] = await db
+      .select()
+      .from(savingsGoalsTable)
+      .where(and(
+        eq(savingsGoalsTable.userId, userId),
+        eq(savingsGoalsTable.categoryId, categoryId),
+      ))
+      .limit(1);
+    return goal;
+  }
+
+  static async adjustCurrentAmount(userId: number, id: number, delta: number) {
+    const [goal] = await db
+      .select()
+      .from(savingsGoalsTable)
+      .where(and(eq(savingsGoalsTable.id, id), eq(savingsGoalsTable.userId, userId)))
+      .limit(1);
+
+    if (!goal) return undefined;
+
+    const newAmount = Math.max(0, parseFloat(goal.currentAmount) + delta);
+
+    const [updated] = await db
+      .update(savingsGoalsTable)
+      .set({ currentAmount: String(newAmount) })
+      .where(eq(savingsGoalsTable.id, id))
+      .returning();
+
+    return updated ? mapGoal(updated) : undefined;
   }
 }

@@ -5,11 +5,15 @@
  * Rayo AI Personal Finance API
  * OpenAPI spec version: 0.1.0
  */
+import type { SavingsGoalGoalType } from './savingsGoalGoalType';
 
 export interface SavingsGoal {
   id: number;
   userId: number;
   name: string;
+  /** @minimum 1 */
+  categoryId: number;
+  goalType: SavingsGoalGoalType;
   targetAmount: number;
   currentAmount: number;
   deadline: string;

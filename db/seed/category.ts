@@ -1,0 +1,23 @@
+// db/seed/categories.ts
+export const SYSTEM_CATEGORIES = [
+  { name: "Food & Dining",          slug: "food_dining",         parentSlug: "food_dining",         emoji: "🍽️" },
+  { name: "Transport",              slug: "transport",            parentSlug: "transport",            emoji: "🚗" },
+  { name: "Shopping",               slug: "shopping",             parentSlug: "shopping",             emoji: "🛍️" },
+  { name: "Bills & Utilities",      slug: "bills_utilities",      parentSlug: "bills_utilities",      emoji: "🏠" },
+  { name: "Health",                 slug: "health",               parentSlug: "health",               emoji: "💊" },
+  { name: "Entertainment",          slug: "entertainment",        parentSlug: "entertainment",        emoji: "🎬" },
+  { name: "Education",              slug: "education",            parentSlug: "education",            emoji: "📚" },
+  { name: "Savings & Investment",   slug: "savings_investment",   parentSlug: "savings_investment",   emoji: "💰" },
+  { name: "Airtime & Data",         slug: "airtime_data",         parentSlug: "airtime_data",         emoji: "📱" },
+  { name: "Beauty & Personal Care", slug: "beauty_personal",      parentSlug: "beauty_personal",      emoji: "💄" },
+  { name: "Gifts & Charity",        slug: "gifts_charity",        parentSlug: "gifts_charity",        emoji: "🎁" },
+  { name: "Travel",                 slug: "travel",               parentSlug: "travel",               emoji: "✈️" },
+  { name: "Salary",                 slug: "salary",               parentSlug: "salary",               emoji: "💼" },
+  { name: "Freelance",              slug: "freelance",            parentSlug: "freelance",            emoji: "💻" },
+  { name: "Business Income",        slug: "business_income",      parentSlug: "business_income",      emoji: "📈" },
+  { name: "Family Support",         slug: "family_support",       parentSlug: "family_support",       emoji: "💜" },
+  { name: "Transfers Received",     slug: "transfer_received",    parentSlug: "transfer_received",    emoji: "🔄" },
+  { name: "Transfers Sent",         slug: "transfer_sent",        parentSlug: "transfer_sent",        emoji: "🔃" },
+  { name: "Refund",                 slug: "refund",               parentSlug: "refund",               emoji: "↩️" },
+  { name: "Other",                  slug: "other",                parentSlug: "other",                emoji: "📦" },
+];

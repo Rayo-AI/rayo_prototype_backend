@@ -11,8 +11,10 @@ export interface CreateTransactionBody {
   type: CreateTransactionBodyType;
   /** @minimum 0.01 */
   amount: number;
-  /** @minLength 1 */
-  category: string;
+  /** @minimum 1 */
+  categoryId?: number;
+  category?: string;
+  parentSlug?: string;
   institution?: string;
   merchant?: string;
   description?: string;

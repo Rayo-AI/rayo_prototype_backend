@@ -7,8 +7,10 @@
  */
 
 export interface UpsertBudgetBody {
-  /** @minLength 1 */
-  category: string;
+  /** @minimum 1 */
+  categoryId?: number;
+  category?: string;
+  parentSlug?: string;
   /** @minimum 0 */
   monthlyLimit: number;
   rollover: boolean;

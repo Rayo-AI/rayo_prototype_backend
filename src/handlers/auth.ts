@@ -6,9 +6,10 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.ts";
 import { sendSignUpEmail, sendOTPEmail, sendPasswordResetEmail, sendSuccessfulResetEmail, sendResendResetLinkEmail } from "../services/email.ts";
 import { AuthUseCase } from "../usecases/auth.ts";
 import { appResponse } from "../utils/appResponse.ts";
-import { asyncHandler } from "../utils/asyncHandler.ts";
+import { asyncHandler } from "../middlewares/asyncHandler.ts";
 import { ErrorResponse } from "../utils/errorResponse.ts";
 import ENV from "../../db/env.ts";
+import { SYSTEM_CATEGORIES } from "../../db/seed/category.ts";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const parsed = AuthSignupBody.safeParse(req.body);
@@ -381,16 +382,13 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
 });
 
 export const completeOnboarding = asyncHandler(async (req, res) => {
-  // Extract userId exactly how your uploadProfileImage function does
   const userId = (req as typeof req & { userId: number }).userId;
 
-  // Validation
   const parsed = OnboardingBody.safeParse(req.body);
   if (!parsed.success) {
     throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
   }
 
-  // Define fallback defaults since the frontend only provided names
   const FALLBACK_LIMIT = "30000";
   const defaultDeadline = () => {
     const d = new Date();
@@ -398,20 +396,25 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     return d.toISOString().split("T")[0];
   };
 
-  const formattedCategories = (parsed.data.categories || []).map((name) => ({
-    name,
-    monthlyLimit: FALLBACK_LIMIT,
-  }));
+  const formattedCategories = (parsed.data.categories || []).map((name) => {
+    const match = SYSTEM_CATEGORIES.find(
+      (cat) => cat.name.toLowerCase() === name.toLowerCase()
+    );
+    return {
+      name,
+      monthlyLimit: FALLBACK_LIMIT,
+      parentSlug: match?.slug ?? "other", 
+    };
+  });
 
   const formattedGoals = (parsed.data.financialGoals || []).map((name) => ({
     name,
     targetAmount: "0",
     deadline: defaultDeadline(),
+    parentSlug: "savings_investment", // ← was missing
   }));
-  // ------------------------------
 
   try {
-    // Pass the newly formatted arrays to satisfy TypeScript and the UseCase
     await AuthUseCase.onboardUser({
       userId,
       level: parsed.data.level,
@@ -422,7 +425,6 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     });
 
     logger.info(`User ${userId} successfully completed onboarding setup.`);
-
     return appResponse(res, 200, { message: "Onboarding completed successfully" });
   } catch (error) {
     logger.error(`Failed to complete onboarding for user ${userId}: ${error}`);

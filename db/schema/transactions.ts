@@ -2,6 +2,7 @@ import { pgTable, serial, integer, text, numeric, date, timestamp, pgEnum } from
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users.ts";
+import { categoriesTable } from "./categories.ts";
 
 export const transactionTypeEnum = pgEnum("transaction_type", ["income", "expense"]);
 
@@ -10,7 +11,10 @@ export const transactionsTable = pgTable("transactions", {
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   type: transactionTypeEnum("type").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  category: text("category").notNull(),
+  categoryId: integer("category_id")
+  .notNull()
+  .references(() => categoriesTable.id),
+  subcategory: text("subcategory").default(""),
   description: text("description").notNull().default(""),
   date: date("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

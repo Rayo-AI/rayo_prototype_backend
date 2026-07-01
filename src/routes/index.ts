@@ -6,6 +6,7 @@ import budgetRouter from "./budget.ts";
 import savingsRouter from "./savings.ts";
 import dashboardRouter from "./dashboard.ts";
 import aiRouter from "./ai.ts";
+import categoryRouter from "./category.ts";
 
 const router: IRouter = Router();
 
@@ -14,6 +15,7 @@ router.use(authRouter);
 router.use(transactionsRouter);
 router.use(budgetRouter);
 router.use(savingsRouter);
+router.use(categoryRouter);
 router.use(dashboardRouter);
 router.use(aiRouter);
 

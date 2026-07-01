@@ -1,5 +1,6 @@
 import { BudgetUseCase } from "./budget";
 import { TransactionUseCase } from "./transaction";
+import { CategoryUseCase } from "./category";
 
 function formatCurrency(amount: number) {
   return `₦${amount.toLocaleString("en-NG")}`;
@@ -31,6 +32,9 @@ export async function buildFinancialContext(
       BudgetUseCase.getBudget(userId),
       TransactionUseCase.getTransactions(userId, {}),
     ]);
+
+  const categories = await CategoryUseCase.listForUser(userId);
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
 
   const budgets = budgetResult.rows ?? [];
   const allTransactions =
@@ -67,8 +71,7 @@ export async function buildFinancialContext(
           return acc;
         }
 
-        const category =
-          t.category || "Other";
+        const category = categoryById.get(t.categoryId)?.name || "Other";
 
         acc[category] =
           (acc[category] ?? 0) +
@@ -127,7 +130,7 @@ export async function buildFinancialContext(
       .map((t) => ({
         type: t.type,
         amount: Number(t.amount),
-        category: t.category || "Other",
+        category: categoryById.get(t.categoryId)?.name || "Other",
         description:
           t.description ?? "",
         date: t.date,
@@ -175,9 +178,7 @@ ${
     ? budgets
         .map(
           (b) =>
-            `- ${
-              b.category
-            }: ${formatCurrency(
+            `- ${categoryById.get(b.categoryId)?.name || "Other"}: ${formatCurrency(
               Number(b.monthlyLimit)
             )}${
               b.rollover
@@ -225,7 +226,7 @@ ${
     },
 
     budgets: budgets.map((b) => ({
-      category: b.category,
+      category: categoryById.get(b.categoryId)?.name || "Other",
       limit: Number(b.monthlyLimit),
       rollover: b.rollover,
     })),

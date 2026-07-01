@@ -1,6 +1,7 @@
 import { GetDashboardSummaryResponse, GetSpendingByCategoryResponse } from "../../validation";
 import { getCached } from "../lib/cache";
 import { CACHE_KEYS, CACHE_TTL } from "../lib/cacheKeys";
+import { CategoryUseCase } from "../usecases/category";
 import { BudgetUseCase } from "../usecases/budget";
 import { TransactionUseCase } from "../usecases/transaction";
 import { SavingsUseCase } from "../usecases/savings";
@@ -43,6 +44,7 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
         recentRows,
         categoryRows,   // ← must match Promise.all order
         savingsGoals,   // ← moved to match position in Promise.all
+        categories,
       ] = await Promise.all([
         TransactionUseCase.getMonthlyIncome(userId, new Date(start), new Date(end)),
         TransactionUseCase.getMonthlyExpenses(userId, new Date(start), new Date(end)),
@@ -55,7 +57,10 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
           end: new Date(end),
         }),
         SavingsUseCase.getSavingsGoals(userId, {limit: 10, page: 1}),  // ← last, matches destructuring
+        CategoryUseCase.listForUser(userId),
       ]);
+
+      const categoryById = new Map(categories.map(category => [category.id, category]));
 
       // ── Balances ─────────────────────────────────────────────────────────
       const monthlyIncome   = Math.round(toNumber(incomeResult)     * 100) / 100;
@@ -74,21 +79,23 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
      // ── Budgets ───────────────────────────────────────────────────────────
       const mappedBudgets = budgets.rows.map(b => {
         const limit = parseFloat(b.monthlyLimit);
-        // Find spent amount from categoryRows
-        const match = categoryRows.find(
-          c => c.category?.toLowerCase() === b.category?.toLowerCase()
-        );
-        const spent = match ? Number(match.amount) : 0;
+        const category = categoryById.get(b.categoryId);
+        const spent = categoryRows
+          .filter(c => c.parentSlug === category?.parentSlug)
+          .reduce((sum, row) => sum + Number(row.amount), 0);
 
         return {
           id:           b.id,
-          category:     b.category,
+          userId:       userId,
+          categoryId:   b.categoryId,
+          categoryName: category?.name,
+          parentSlug:   category?.parentSlug,
           monthlyLimit: Math.round(limit * 100) / 100,
           percentUsed:  limit ? Math.round(Math.min(100, (spent / limit) * 100) * 100) / 100 : 0,
-          userId:       userId, // Pulled directly from the req context at the top of the function
           totalSpent:   Math.round(spent * 100) / 100,
           remaining:    Math.round((limit - spent) * 100) / 100,
-          rollover:     b.rollover || false // Assuming b.rollover exists on the raw DB row
+          rollover:     b.rollover || false,
+          balance:      b.balance ? Math.round(parseFloat(String(b.balance)) * 100) / 100 : undefined,
         };
       });
 
@@ -103,7 +110,7 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
 
       // ── Spending by category ──────────────────────────────────────────────
       const spendingByCategory = categoryRows.map(r => ({
-        category:   r.category,
+        categoryId: r.categoryId,
         amount:     Math.round(Number(r.amount) * 100) / 100,
         percentage: Math.round(Number(r.percentage) * 100) / 100,
       }));
@@ -114,22 +121,16 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
         userId:      String(t.userId),
         type:        t.type,
         amount:      Math.round(parseFloat(t.amount) * 100) / 100,
-        category:    t.category,
+        categoryId:  t.categoryId,
         description: t.description,
+        institution: t.institution,
+        merchant:    t.merchant,
         date:        t.date,
         createdAt:   t.createdAt.toISOString(),
       }));
 
       // ── Savings goals ─────────────────────────────────────────────────────
-      const mappedSavings = (savingsGoals.rows ?? []).map(g => ({
-        id:              g.id,
-        name:            g.name,
-        targetAmount:    g.targetAmount,
-        currentAmount:   g.currentAmount,
-        deadline:        g.deadline,
-        percentComplete: g.percentComplete,
-        userId:          userId // Pulled directly from the req context!
-      }));
+      const mappedSavings = savingsGoals.rows ?? [];
 
       return {
         totalBalance,
@@ -169,7 +170,7 @@ export const dashboardSpendingByCategory = asyncHandler(async (req, res) => {
   });
 
   const result = rows.map(r => ({
-    category:   r.category,
+    categoryId: r.categoryId,
     amount:     r.amount,
     percentage: r.percentage,
   }));

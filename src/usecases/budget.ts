@@ -2,38 +2,34 @@ import { BudgetRepository } from "../repository/budget";
 
 export class BudgetUseCase {
   static async getBudget(userId: number, filters: {
-    category?: string;
+    categoryId?: number;
     limit?: number;
     page?: number;
   } = {}) {
-    const budget = await BudgetRepository.getAllBudgets(userId, filters);
-    return budget;
+    return BudgetRepository.getAllBudgets(userId, filters);
   }
 
-  static async createBudget(userId: number, category: string, monthlyLimit: number) {
-    const budget = await BudgetRepository.createBudget(userId, category, monthlyLimit);
-    return budget;
+  static async createBudget(userId: number, categoryId: number, monthlyLimit: number, rollover = true) {
+    return BudgetRepository.createBudget(userId, categoryId, monthlyLimit, rollover);
   }
 
-  static async updateBudget(userId: number, category: string, monthlyLimit: number) {
-    const budget = await BudgetRepository.updateBudget(userId, category, monthlyLimit);
-    return budget;
+  static async updateBudget(userId: number, categoryId: number, monthlyLimit: number) {
+    return BudgetRepository.updateBudget(userId, categoryId, monthlyLimit);
   }
 
-  static async getBudgetByCategory(userId: number, category: string) {
-    const budget = await BudgetRepository.getBudgetByCategory(userId, category);
-    return budget;
+  static async getBudgetByCategoryId(userId: number, categoryId: number) {
+    return BudgetRepository.getBudgetByCategoryId(userId, categoryId);
   }
 
-  static async updateBalance(userId: number, category: string, balance: number) {
-    return BudgetRepository.updateBalance(userId, category, balance);
+  static async updateBalance(userId: number, categoryId: number, balance: number) {
+    return BudgetRepository.updateBalance(userId, categoryId, balance);
   }
 
   static async resetBalancesForMonthRollover(userId: number, start: string, end: string) {
     return BudgetRepository.resetBalancesForMonthRollover(userId, start, end);
   }
 
-  static async deleteBudget(userId: number, category: string) {
-    return BudgetRepository.deleteBudget(userId, category);
+  static async deleteBudget(userId: number, categoryId: number) {
+    return BudgetRepository.deleteBudget(userId, categoryId);
   }
 }

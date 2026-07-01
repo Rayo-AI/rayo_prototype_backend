@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CategorySpending {
-  categoryId: number;
-  amount: number;
-  percentage: number;
+export interface CreateCategoryBody {
+  name: string;
+  parentSlug: string;
 }

@@ -5,7 +5,7 @@ import { BudgetUseCase } from "../usecases/budget";
 import { TransactionUseCase } from "../usecases/transaction";
 import { SavingsUseCase } from "../usecases/savings";
 import { appResponse } from "../utils/appResponse";
-import { asyncHandler } from "../utils/asyncHandler";
+import { asyncHandler } from "../middlewares/asyncHandler";
 
 function getCurrentMonthRange() {
   const now = new Date();

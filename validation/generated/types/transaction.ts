@@ -12,7 +12,7 @@ export interface Transaction {
   userId: string;
   type: TransactionType;
   amount: number;
-  category: string;
+  categoryId: number;
   description?: string;
   institution?: string;
   merchant?: string;

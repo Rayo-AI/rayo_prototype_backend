@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/node";
 import Router from "./routes/index.ts";
 import { logger } from "./lib/logger.ts";
 import { errorHandler } from "./middlewares/errorHandler.ts";
-import { asyncHandler } from "./utils/asyncHandler.ts";
+import { asyncHandler } from "./middlewares/asyncHandler.ts";
 import { apiLimiter } from "./lib/rateLimiter.ts";
 import passport from "../db/google.ts";
 
@@ -48,7 +48,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 // Apply rate limiting to all API routes
-app.use('/api/v1/', apiLimiter);
+// app.use('/api/v1/', apiLimiter);
 app.set("trust proxy", 1);
 
 app.get("/", asyncHandler(async (req, res) => {

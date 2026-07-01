@@ -1,7 +1,7 @@
 import { AskAiBody, GetAiInsightsResponse, AskAiResponse } from "../../validation";
 import { AiUseCase } from "../usecases/ai";
 import { appResponse } from "../utils/appResponse";
-import { asyncHandler } from "../utils/asyncHandler";
+import { asyncHandler } from "../middlewares/asyncHandler";
 import { ErrorResponse } from "../utils/errorResponse";
 
 export const getInsights = asyncHandler(async (req, res) => {

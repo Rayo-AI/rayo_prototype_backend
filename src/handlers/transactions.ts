@@ -1,15 +1,26 @@
-import { asyncHandler } from "../utils/asyncHandler";
+import { asyncHandler } from "../middlewares/asyncHandler";
 import { CreateTransactionBody, DeleteTransactionParams, ListTransactionsQueryParams, ListTransactionsResponse } from "../../validation";
 import { TransactionUseCase } from "../usecases/transaction";
 import { appResponse } from "../utils/appResponse";
 import { ErrorResponse } from "../utils/errorResponse";
 import { invalidateCache } from "../lib/cache";
 import { CACHE_KEYS } from "../lib/cacheKeys";
+import { CategoryUseCase } from "../usecases/category";
+import { SavingsUseCase } from "../usecases/savings";
 
-/**
- * Calculates the month range key from a transaction date
- * Used for cache invalidation to ensure correct month's cache is cleared
- */
+async function syncSavingsGoalOnTransaction(
+  userId: number,
+  categoryId: number | null | undefined,
+  amount: number,
+  direction: 1 | -1, // 1 = add to goal, -1 = remove from goal
+) {
+  if (!categoryId) return;
+  const goal = await SavingsUseCase.findByCategoryId(userId, categoryId);
+  if (!goal) return; // category isn't tied to any savings goal — no-op
+  await SavingsUseCase.adjustCurrentAmount(userId, goal.id, amount * direction);
+}
+
+//Calculates the month range key from a transaction date
 function getMonthRangeFromDate(dateStr: string): string {
   const date = new Date(dateStr);
   const year = date.getFullYear();
@@ -61,29 +72,29 @@ export const listTransactions = asyncHandler(async (req, res) => {
   }
 
   const rows = await TransactionUseCase.getTransactions(userId, {
-    category: query.data.category,
+    parentSlug: query.data.category,
     type: query.data.type,
-    startDate: query.data.startDate ? new Date(query.data.startDate) : undefined, // ← was start
-    endDate: query.data.endDate ? new Date(query.data.endDate) : undefined,       // ← was end
+    startDate: query.data.startDate ? new Date(query.data.startDate) : undefined,
+    endDate: query.data.endDate ? new Date(query.data.endDate) : undefined,
     description: query.data.description,
     amount: query.data.amount,
   });
 
   const transactions = {
-  rows: rows.rows.map(t => ({
-    id: t.id,
-    userId: String(t.userId),
-    type: t.type,
-    amount: parseFloat(t.amount),
-    category: t.category,
-    description: t.description,
-    institution: t.institution,
-    merchant: t.merchant,
-    date: t.date,
-    createdAt: t.createdAt.toISOString(),
-  })),
-  pagination: rows.pagination,
-};
+    rows: rows.rows.map(t => ({
+      id: t.id,
+      userId: String(t.userId),
+      type: t.type,
+      amount: parseFloat(t.amount),
+      categoryId: t.categoryId,
+      description: t.description,
+      institution: t.institution,
+      merchant: t.merchant,
+      date: t.date,
+      createdAt: t.createdAt.toISOString(),
+    })),
+    pagination: rows.pagination,
+  };
 
   return appResponse(res, 200, ListTransactionsResponse.parse(transactions));
 });
@@ -104,27 +115,35 @@ export const createTransaction = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
   }
 
+  // Resolve category name + parentSlug (or an existing categoryId) into a categoryId
+  const categoryId = await CategoryUseCase.resolveCategory(userId, {
+    categoryId: parsed.data.categoryId,
+    categoryName: parsed.data.category,
+    parentSlug: parsed.data.parentSlug,
+  });
+
   const row = await TransactionUseCase.createTransaction(userId, {
     type: parsed.data.type,
     amount: parsed.data.amount.toString(),
-    category: parsed.data.category,
+    categoryId,
     description: parsed.data.description,
     date: parsed.data.date,
   });
 
-  // Invalidate caches for the transaction's actual month (not current month)
+  await syncSavingsGoalOnTransaction(userId, categoryId, parseFloat(row.amount), 1);
+
   await invalidateTransactionMonthCaches(userId, row.date);
 
-  return appResponse(res, 201, ({
+  return appResponse(res, 201, {
     id: row.id,
     userId: String(row.userId),
     type: row.type,
     amount: parseFloat(row.amount),
-    category: row.category,
+    categoryId: row.categoryId,
     description: row.description,
     date: row.date,
     createdAt: row.createdAt.toISOString(),
-  }));
+  });
 });
 
 export const deleteTransaction = asyncHandler(async (req, res, next) => {
@@ -141,6 +160,8 @@ export const deleteTransaction = asyncHandler(async (req, res, next) => {
   if (!deleted) {
     throw next(new ErrorResponse("Transaction not found or not authorized to delete", 404));
   }
+
+  await syncSavingsGoalOnTransaction(userId, deleted.categoryId, parseFloat(deleted.amount), -1);
 
   // Invalidate cache for the transaction's actual month (not current month)
   await invalidateTransactionMonthCaches(userId, deleted.date);
@@ -210,10 +231,21 @@ export const updateTransaction = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
   }
 
+  // Only resolve a categoryId if the client actually sent a category to change
+  let categoryId: number | undefined;
+  if (parsed.data.categoryId) {
+    categoryId = parsed.data.categoryId;
+  } else if (parsed.data.category) {
+    categoryId = await CategoryUseCase.resolveCategory(userId, {
+      categoryName: parsed.data.category,
+      parentSlug: parsed.data.parentSlug,
+    });
+  }
+
   const updated = await TransactionUseCase.updateTransaction(userId, transactionId, {
     type: parsed.data.type,
     amount: parsed.data.amount ? parsed.data.amount.toString() : undefined,
-    category: parsed.data.category,
+    categoryId,
     description: parsed.data.description,
     date: parsed.data.date,
   });
@@ -222,7 +254,6 @@ export const updateTransaction = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Transaction not found or not authorized", 404);
   }
 
-  // Invalidate cache for the transaction's new month
   await invalidateTransactionMonthCaches(userId, updated.date);
 
   return appResponse(res, 200, {
@@ -230,9 +261,10 @@ export const updateTransaction = asyncHandler(async (req, res) => {
     userId: String(updated.userId),
     type: updated.type,
     amount: parseFloat(updated.amount),
-    category: updated.category,
+    categoryId: updated.categoryId,
     description: updated.description,
     date: updated.date,
     createdAt: updated.createdAt.toISOString(),
   }, "Transaction updated successfully");
 });
+  

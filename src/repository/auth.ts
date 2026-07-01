@@ -1,16 +1,20 @@
 import { budgetsTable, db, savingsGoalsTable, usersTable } from "../../db/index.ts";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.ts";
+import { CategoryUseCase } from "../usecases/category.ts";
 
 export interface CategoryInput {
   name: string;
   monthlyLimit: string;
+  parentSlug: string;   
 }
 
 export interface GoalInput {
   name: string;
   targetAmount: string;
   deadline: string;
+  categoryName?: string;  
+  parentSlug?: string;    
 }
 
 export interface OnboardingPayload {
@@ -129,49 +133,51 @@ export class AuthRepository {
 
   static async completeSetup(payload: OnboardingPayload) {
     const { userId, method, income, goals, categories } = payload;
-
-    // Dynamically determine budgeting style based on the user's string
-    // If they picked "zero-based", envelopeBased is false. Otherwise, true.
     const envelopeBased = method.toLowerCase() !== "zero-based";
-    const isZeroBased = !envelopeBased;
 
-    // Execute within a database transaction to ensure data integrity
+    // Resolve all categoryIds before opening the transaction —
+    // CategoryUseCase does its own DB calls and shouldn't nest inside tx
+    const resolvedCategories = await Promise.all(
+      (categories ?? []).map(async (cat) => ({
+        categoryId: await CategoryUseCase.resolveCategory(userId, {
+          categoryName: cat.name,
+          parentSlug: cat.parentSlug,
+        }),
+        monthlyLimit: cat.monthlyLimit,
+        rollover: envelopeBased,
+      }))
+    );
+
+    const resolvedGoals = await Promise.all(
+      (goals ?? []).map(async (goal) => ({
+        categoryId: await CategoryUseCase.resolveCategory(userId, {
+          categoryName: "Savings",
+          parentSlug: goal.parentSlug,
+        }),
+        name: goal.name,
+        goalType: "PERSONAL" as const,
+        targetAmount: goal.targetAmount,
+        currentAmount: "0",
+        deadline: goal.deadline,
+      }))
+    );
+
     await db.transaction(async (tx) => {
-      
-      // 1. Update user profile
       await tx
         .update(usersTable)
-        .set({
-          onboardingComplete: true,
-          envelopeBased,
-          incomeSource: income,
-        })
+        .set({ onboardingComplete: true, envelopeBased, incomeSource: income })
         .where(eq(usersTable.id, userId));
 
-      // 2. Insert budget categories exactly as defined by the user
-      if (categories && categories.length > 0) {
-        const budgetRows = categories.map((cat) => ({
-          userId,
-          category: cat.name,
-          monthlyLimit: cat.monthlyLimit,
-          balance: "0",
-          rollover: !isZeroBased, // Zero-based generally implies no rollover
-        }));
-
-        await tx.insert(budgetsTable).values(budgetRows);
+      if (resolvedCategories.length) {
+        await tx.insert(budgetsTable).values(
+          resolvedCategories.map((cat) => ({ userId, ...cat }))
+        );
       }
 
-      // 3. Insert savings goals exactly as defined by the user
-      if (goals && goals.length > 0) {
-        const goalRows = goals.map((goal) => ({
-          userId,
-          name: goal.name,
-          targetAmount: goal.targetAmount, 
-          currentAmount: "0",
-          deadline: goal.deadline, 
-        }));
-
-        await tx.insert(savingsGoalsTable).values(goalRows);
+      if (resolvedGoals.length) {
+        await tx.insert(savingsGoalsTable).values(
+          resolvedGoals.map((goal) => ({ userId, ...goal }))
+        );
       }
     });
 

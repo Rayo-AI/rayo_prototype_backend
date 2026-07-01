@@ -639,6 +639,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all categories
+      responses:
+        "200":
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryBody"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -880,8 +912,8 @@ components:
           enum: [income, expense]
         amount:
           type: number
-        category:
-          type: string
+        categoryId:
+          type: integer
         description:
           type: string
         institution:
@@ -897,7 +929,7 @@ components:
         - userId
         - type
         - amount
-        - category
+        - categoryId
         - date
         - createdAt
 
@@ -910,9 +942,13 @@ components:
         amount:
           type: number
           minimum: 0.01
+        categoryId:
+          type: integer
+          minimum: 1
         category:
           type: string
-          minLength: 1
+        parentSlug:
+          type: string
         institution:
           type: string
         merchant:
@@ -925,7 +961,6 @@ components:
       required:
         - type
         - amount
-        - category
         - date
 
     UpdateTransactionBody:
@@ -937,9 +972,9 @@ components:
         amount:
           type: number
           minimum: 0.01
-        category:
-          type: string
-          minLength: 1
+        categoryId:
+          type: integer
+          minimum: 1
         description:
           type: string
         date:
@@ -967,7 +1002,11 @@ components:
           type: integer
         userId:
           type: integer
-        category:
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        parentSlug:
           type: string
         monthlyLimit:
           type: number
@@ -984,7 +1023,6 @@ components:
       required:
         - id
         - userId
-        - category
         - monthlyLimit
         - totalSpent
         - remaining
@@ -994,9 +1032,13 @@ components:
     UpsertBudgetBody:
       type: object
       properties:
+        categoryId:
+          type: integer
+          minimum: 1
         category:
           type: string
-          minLength: 1
+        parentSlug:
+          type: string
         monthlyLimit:
           type: number
           minimum: 0
@@ -1007,7 +1049,6 @@ components:
           type: number
           minimum: 0
       required:
-        - category
         - monthlyLimit
         - rollover
 
@@ -1020,6 +1061,15 @@ components:
           type: integer
         name:
           type: string
+        categoryId:
+          type: integer
+          minimum: 1
+        goalType:
+          type: string
+          enum:
+            - PERSONAL
+            - GROUP
+            - AJO
         targetAmount:
           type: number
         currentAmount:
@@ -1032,56 +1082,125 @@ components:
         - id
         - userId
         - name
+        - categoryId
+        - goalType
         - targetAmount
         - currentAmount
         - deadline
         - percentComplete
-
+        
     CreateSavingsGoalBody:
       type: object
       properties:
         name:
           type: string
           minLength: 1
+
+        categoryId:
+          type: integer
+          minimum: 1
+
+        category:
+          type: string
+        parentSlug:
+          type: string
+        goalType:
+          type: string
+          enum:
+            - PERSONAL
+            - GROUP
+            - AJO
+
         targetAmount:
           type: number
           minimum: 0.01
-        currentAmount:
-          type: number
-          minimum: 0
+
         deadline:
           type: string
-          minLength: 1
+          format: date
+
       required:
         - name
         - targetAmount
         - deadline
-
+        
     UpdateSavingsGoalBody:
       type: object
       properties:
         name:
           type: string
-          minLength: 1
+        categoryId:
+          type: integer
+          minimum: 1
+        category:
+          type: string
+        parentSlug:
+          type: string
+        goalType:
+          type: string
+          enum:
+            - PERSONAL
+            - GROUP
+            - AJO
         targetAmount:
           type: number
-          minimum: 0.01
-        currentAmount:
+        currentAmount:          
           type: number
           minimum: 0
         deadline:
           type: string
-      required: []
+          format: date
 
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+
+        name:
+          type: string
+
+        slug:
+          type: string
+
+        parentSlug:
+          type: string
+
+        emoji:
+          type: string
+
+        isSystem:
+          type: boolean
+
+      required:
+        - id
+        - name
+        - slug
+        - parentSlug
+        - isSystem
+          
+    CreateCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+
+        parentSlug:
+          type: string
+
+      required:
+        - name
+        - parentSlug
+        
     DashboardSummary:
       type: object
       properties:
         totalBalance:
           type: number
-        totalIncome:         # ← Add this
-          type: number       # ← Add this
-        totalExpenses:       # ← Add this
-          type: number       # ← Add this
+        totalIncome:         
+          type: number       
+        totalExpenses:       
+          type: number       
         monthlyIncome:
           type: number
         monthlyExpenses:
@@ -1112,8 +1231,8 @@ components:
             $ref: "#/components/schemas/SavingsGoal" 
       required:
         - totalBalance
-        - totalIncome        # ← Add this
-        - totalExpenses      # ← Add this
+        - totalIncome        
+        - totalExpenses      
         - monthlyIncome
         - monthlyExpenses
         - monthlySavings
@@ -1127,14 +1246,14 @@ components:
     CategorySpending:
       type: object
       properties:
-        category:
-          type: string
+        categoryId:
+          type: integer
         amount:
           type: number
         percentage:
           type: number
       required:
-        - category
+        - categoryId
         - amount
         - percentage
 

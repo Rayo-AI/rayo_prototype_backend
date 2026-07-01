@@ -3,8 +3,9 @@ import { logger } from "../lib/logger";
 import { AuthUseCase } from "../usecases/auth";
 import { BudgetUseCase } from "../usecases/budget";
 import { TransactionUseCase } from "../usecases/transaction";
+import { CategoryUseCase } from "../usecases/category";
 import { appResponse } from "../utils/appResponse";
-import { asyncHandler } from "../utils/asyncHandler";
+import { asyncHandler } from "../middlewares/asyncHandler";
 import { ErrorResponse } from "../utils/errorResponse";
 
 function getCurrentMonthRange() {
@@ -17,13 +18,16 @@ function getCurrentMonthRange() {
 
 async function calcBudgetResponse(
   userId: number,
-  budget: { id: number; category: string; monthlyLimit: string; balance: string; rollover: boolean },
+  budget: { id: number; categoryId: number; monthlyLimit: string; balance: string; rollover: boolean },
 ) {
   const { start, end } = getCurrentMonthRange();
+  const category = await CategoryUseCase.findCategoryById(budget.categoryId);
   const monthlyLimit = parseFloat(budget.monthlyLimit);
   const carryover = budget.rollover ? parseFloat(budget.balance) : 0;
 
-  const totalSpent = await TransactionUseCase.getSpentByCategory(userId, budget.category, start, end);
+  const totalSpent = category
+    ? await TransactionUseCase.getSpentByParentSlug(userId, category.parentSlug, start, end)
+    : 0;
   const remaining = Math.max(0, monthlyLimit + carryover - totalSpent);
   const percentUsed = (monthlyLimit + carryover) > 0
     ? parseFloat(Math.min(100, (totalSpent / (monthlyLimit + carryover)) * 100).toFixed(2))
@@ -32,7 +36,8 @@ async function calcBudgetResponse(
   return {
     id: budget.id,
     userId,
-    category: budget.category,
+    categoryId: budget.categoryId,
+    category: category?.name,
     monthlyLimit,
     totalSpent,
     remaining,
@@ -44,16 +49,9 @@ async function calcBudgetResponse(
 export const getBudgets = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
   const budgets = await BudgetUseCase.getBudget(userId);
-  const { start, end } = getCurrentMonthRange();
 
   const response = await Promise.all(
-    budgets.rows.map(async (b) => {
-      const totalSpent = await TransactionUseCase.getSpentByCategory(userId, b.category, start, end);
-      const monthlyLimit = parseFloat(b.monthlyLimit);
-      const remaining = Math.max(0, monthlyLimit - totalSpent);
-      const percentUsed = monthlyLimit > 0 ? parseFloat(Math.min(100, (totalSpent / monthlyLimit) * 100).toFixed(2)) : 0;
-      return { id: b.id, userId, category: b.category, monthlyLimit, totalSpent, remaining, percentUsed, rollover: b.rollover };
-    })
+    budgets.rows.map((b) => calcBudgetResponse(userId, b))
   );
 
   return appResponse(res, 200, response);
@@ -61,23 +59,32 @@ export const getBudgets = asyncHandler(async (req, res) => {
 
 export const setBudget = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
-  const params = req.params;
 
   const parsed = UpsertBudgetBody.safeParse(req.body);
   if (!parsed.success) {
     throw new ErrorResponse("Invalid request body", 400, parsed.error.flatten().fieldErrors);
   }
 
-  const { category, monthlyLimit } = parsed.data;
+  const categoryId = parsed.data.categoryId
+    ?? await CategoryUseCase.resolveCategory(userId, {
+        categoryName: parsed.data.category,
+        parentSlug: parsed.data.parentSlug,
+      });
 
-  const existing = await BudgetUseCase.getBudgetByCategory(userId, category);
+  const { monthlyLimit, rollover } = parsed.data;
+
+  const existing = await BudgetUseCase.getBudgetByCategoryId(userId, categoryId);
   const budget = existing
-    ? await BudgetUseCase.updateBudget(userId, category, monthlyLimit)
-    : await BudgetUseCase.createBudget(userId, category, monthlyLimit);
+    ? await BudgetUseCase.updateBudget(userId, categoryId, monthlyLimit)
+    : await BudgetUseCase.createBudget(userId, categoryId, monthlyLimit, rollover);
+
+  if (!budget) {
+    throw new ErrorResponse("Failed to create or update budget", 500);
+  }
 
   const response = await calcBudgetResponse(userId, budget);
   const validated = UpsertBudgetResponse.parse(response);
-  logger.info(`Budget for category "${category}" ${existing ? "updated" : "created"} for user ID ${userId}`);
+  logger.info(`Budget for category ID ${categoryId} ${existing ? "updated" : "created"} for user ID ${userId}`);
   return appResponse(res, 200, validated);
 });
 
@@ -86,14 +93,16 @@ export async function processMonthRollover(userId: number, start: string, end: s
   const budgets = await BudgetUseCase.getBudget(userId);
 
   for (const budget of budgets.rows) {
-    // per-category rollover overrides global preference
     const isEnvelope = budget.rollover ?? user.envelopeBased;
     if (!isEnvelope) continue;
 
-    const spent = await TransactionUseCase.getSpentByCategory(userId, budget.category, start, end);
+    const category = await CategoryUseCase.findCategoryById(budget.categoryId);
+    if (!category) continue;
+
+    const spent = await TransactionUseCase.getSpentByParentSlug(userId, category.parentSlug, start, end);
     const leftover = parseFloat(budget.monthlyLimit) - spent;
     const newBalance = parseFloat(budget.balance) + leftover;
-    await BudgetUseCase.updateBalance(userId, budget.category, newBalance);
+    await BudgetUseCase.updateBalance(userId, budget.categoryId, newBalance);
   }
 }
 
@@ -106,20 +115,19 @@ export const resetBalancesForMonthRollover = asyncHandler(async (req, res) => {
 
 export const deleteBudget = asyncHandler(async (req, res) => {
   const userId = (req as typeof req & { userId: number }).userId;
-  const category = String(req.params.category);
+  const categoryId = parseInt(String(req.params.category), 10);
 
-  if (!category) {
-    throw new ErrorResponse("Category is required", 400);
+  if (isNaN(categoryId)) {
+    throw new ErrorResponse("Valid category ID is required", 400);
   }
 
-  const existing = await BudgetUseCase.getBudgetByCategory(userId, category);
+  const existing = await BudgetUseCase.getBudgetByCategoryId(userId, categoryId);
   if (!existing) {
-    throw new ErrorResponse(`Budget for category "${category}" not found`, 404);
+    throw new ErrorResponse(`Budget for category ID ${categoryId} not found`, 404);
   }
 
-  await BudgetUseCase.deleteBudget(userId, category);
-  logger.info(`Budget for category "${category}" deleted for user ID ${userId}`);
-  
-  return appResponse(res, 200, { message: `Budget for category "${category}" deleted successfully` });
-});
+  await BudgetUseCase.deleteBudget(userId, categoryId);
+  logger.info(`Budget for category ID ${categoryId} deleted for user ID ${userId}`);
 
+  return appResponse(res, 200, { message: `Budget for category ID ${categoryId} deleted successfully` });
+});

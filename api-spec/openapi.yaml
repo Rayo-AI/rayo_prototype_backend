@@ -1161,29 +1161,24 @@ components:
       properties:
         id:
           type: integer
-
         name:
           type: string
-
         slug:
           type: string
-
         parentSlug:
           type: string
-
         emoji:
           type: string
-
+          nullable: true    
         isSystem:
           type: boolean
-
       required:
         - id
         - name
         - slug
         - parentSlug
         - isSystem
-          
+              
     CreateCategoryBody:
       type: object
       properties:

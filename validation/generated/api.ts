@@ -467,7 +467,7 @@ export const ListCategoriesResponseItem = zod.object({
   "name": zod.string(),
   "slug": zod.string(),
   "parentSlug": zod.string(),
-  "emoji": zod.string().optional(),
+  "emoji": zod.string().nullish(),
   "isSystem": zod.boolean()
 })
 export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem)

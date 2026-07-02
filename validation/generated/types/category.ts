@@ -11,6 +11,6 @@ export interface Category {
   name: string;
   slug: string;
   parentSlug: string;
-  emoji?: string;
+  emoji?: string | null;
   isSystem: boolean;
 }

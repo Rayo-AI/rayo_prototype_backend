@@ -76,7 +76,6 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
           : 0;
 
       // ── Budgets ───────────────────────────────────────────────────────────
-     // ── Budgets ───────────────────────────────────────────────────────────
       const mappedBudgets = budgets.rows.map(b => {
         const limit = parseFloat(b.monthlyLimit);
         const category = categoryById.get(b.categoryId);
@@ -87,6 +86,7 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
         return {
           id:           b.id,
           userId:       userId,
+          name:         b.name || category?.name || "Budget",   // ← add this
           categoryId:   b.categoryId,
           categoryName: category?.name,
           parentSlug:   category?.parentSlug,

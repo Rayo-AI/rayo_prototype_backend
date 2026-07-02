@@ -7,6 +7,8 @@
  */
 
 export interface UpsertBudgetBody {
+  /** @minLength 1 */
+  name: string;
   /** @minimum 1 */
   categoryId?: number;
   category?: string;

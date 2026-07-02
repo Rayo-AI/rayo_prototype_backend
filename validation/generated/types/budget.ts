@@ -9,9 +9,9 @@
 export interface Budget {
   id: number;
   userId: number;
+  name: string;
   categoryId?: number;
   categoryName?: string;
-  parentSlug?: string;
   monthlyLimit: number;
   totalSpent: number;
   remaining: number;

@@ -34,6 +34,14 @@ export class CategoryUseCase {
     }
 
     const normalizedName = this.normalizeName(input.categoryName);
+    if (!normalizedName) {
+      throw new ErrorResponse("categoryName must contain at least one alphanumeric character", 400);
+    }
+
+    const userExists = await CategoryRepository.userExists(userId);
+    if (!userExists) {
+      throw new ErrorResponse(`User ${userId} not found`, 404);
+    }
 
     const existing = await CategoryRepository.findUserCategoryByNameAndParent(
       userId,
@@ -44,16 +52,30 @@ export class CategoryUseCase {
 
     const slug = `${parentSlug}__${normalizedName.replace(/\s+/g, "_")}`;
 
-    const created = await CategoryRepository.create({
-      userId,
-      name: normalizedName,
-      slug,
-      parentSlug,
-      emoji: null,
-      isSystem: false,
-    });
+    try {
+      const created = await CategoryRepository.create({
+        userId,
+        name: normalizedName,
+        slug,
+        parentSlug,
+        emoji: null,
+        isSystem: false,
+      });
 
-    return created.id;
+      return created.id;
+    } catch {
+      const fallback = await CategoryRepository.findUserCategoryByNameAndParent(
+        userId,
+        normalizedName,
+        parentSlug
+      );
+
+      if (fallback) {
+        return fallback.id;
+      }
+
+      throw new ErrorResponse("Failed to create category", 500);
+    }
   }
 
   static async listForUser(userId: number) {

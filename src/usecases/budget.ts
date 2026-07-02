@@ -9,12 +9,12 @@ export class BudgetUseCase {
     return BudgetRepository.getAllBudgets(userId, filters);
   }
 
-  static async createBudget(userId: number, categoryId: number, monthlyLimit: number, rollover = true) {
-    return BudgetRepository.createBudget(userId, categoryId, monthlyLimit, rollover);
+  static async createBudget(userId: number, name: string, categoryId: number, monthlyLimit: number, rollover = true) {
+    return BudgetRepository.createBudget(userId, name, categoryId, monthlyLimit, rollover);
   }
 
-  static async updateBudget(userId: number, categoryId: number, monthlyLimit: number) {
-    return BudgetRepository.updateBudget(userId, categoryId, monthlyLimit);
+  static async updateBudget(userId: number, categoryId: number, updates: { monthlyLimit?: number, name?: string }) {
+    return BudgetRepository.updateBudget(userId, categoryId, updates);
   }
 
   static async getBudgetByCategoryId(userId: number, categoryId: number) {

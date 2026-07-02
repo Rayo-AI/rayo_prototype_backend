@@ -295,9 +295,9 @@ export const DeleteTransactionParams = zod.object({
 export const GetBudgetResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "name": zod.string(),
   "categoryId": zod.number().optional(),
   "categoryName": zod.string().optional(),
-  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
@@ -312,6 +312,7 @@ export const GetBudgetResponse = zod.array(GetBudgetResponseItem)
  * @summary Create or update budget
  */
 
+
 export const upsertBudgetBodyMonthlyLimitMin = 0;
 
 export const upsertBudgetBodyRolloverDefault = true;
@@ -320,6 +321,7 @@ export const upsertBudgetBodyBalanceMin = 0;
 
 
 export const UpsertBudgetBody = zod.object({
+  "name": zod.string().min(1),
   "categoryId": zod.number().min(1).optional(),
   "category": zod.string().optional(),
   "parentSlug": zod.string().optional(),
@@ -331,9 +333,9 @@ export const UpsertBudgetBody = zod.object({
 export const UpsertBudgetResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "name": zod.string(),
   "categoryId": zod.number().optional(),
   "categoryName": zod.string().optional(),
-  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),
@@ -498,9 +500,9 @@ export const GetDashboardSummaryResponse = zod.object({
   "budgets": zod.array(zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "name": zod.string(),
   "categoryId": zod.number().optional(),
   "categoryName": zod.string().optional(),
-  "parentSlug": zod.string().optional(),
   "monthlyLimit": zod.number(),
   "totalSpent": zod.number(),
   "remaining": zod.number(),

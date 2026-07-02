@@ -1002,11 +1002,11 @@ components:
           type: integer
         userId:
           type: integer
+        name:
+          type: string
         categoryId:
           type: integer
         categoryName:
-          type: string
-        parentSlug:
           type: string
         monthlyLimit:
           type: number
@@ -1023,6 +1023,7 @@ components:
       required:
         - id
         - userId
+        - name
         - monthlyLimit
         - totalSpent
         - remaining
@@ -1032,6 +1033,9 @@ components:
     UpsertBudgetBody:
       type: object
       properties:
+        name:
+          type: string
+          minLength: 1
         categoryId:
           type: integer
           minimum: 1
@@ -1049,6 +1053,7 @@ components:
           type: number
           minimum: 0
       required:
+        - name
         - monthlyLimit
         - rollover
 

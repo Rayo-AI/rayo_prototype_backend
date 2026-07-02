@@ -10,6 +10,7 @@ export const budgetsTable = pgTable("budgets", {
   categoryId: integer("category_id")
   .notNull()
   .references(() => categoriesTable.id),
+  name: text("name").notNull().default(""),
   monthlyLimit: numeric("monthly_limit", { precision: 12, scale: 2 }).notNull(),
   balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0"),
   rollover: boolean("rollover").notNull().default(true), // ← false = zero-based, true = envelope

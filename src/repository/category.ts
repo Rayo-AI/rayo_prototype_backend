@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { categoriesTable, db } from "../../db/index.ts";
+import { categoriesTable, db, usersTable } from "../../db/index.ts";
 import type { Category, InsertCategory } from "../../db/schema/categories.ts";
 
 export class CategoryRepository {
@@ -10,6 +10,15 @@ export class CategoryRepository {
       .where(eq(categoriesTable.slug, slug))
       .limit(1);
     return row;
+  }
+
+  static async userExists(userId: number): Promise<boolean> {
+    const [row] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    return Boolean(row);
   }
 
   static async findAllSystem(): Promise<Category[]> {

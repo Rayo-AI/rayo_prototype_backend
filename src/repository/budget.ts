@@ -74,6 +74,7 @@ export class BudgetRepository {
 
   static async createBudget(
     userId: number,
+    name: string,
     categoryId: number,
     monthlyLimit: number,
     rollover = true,
@@ -82,6 +83,7 @@ export class BudgetRepository {
       .insert(budgetsTable)
       .values({
         userId,
+        name,
         categoryId,
         monthlyLimit: String(monthlyLimit),
         balance: "0",
@@ -93,6 +95,7 @@ export class BudgetRepository {
 
   static async upsertBudget(
     userId: number,
+    name: string,
     categoryId: number,
     monthlyLimit: number,
     rollover = true,
@@ -101,6 +104,7 @@ export class BudgetRepository {
       .insert(budgetsTable)
       .values({
         userId,
+        name,
         categoryId,
         monthlyLimit: String(monthlyLimit),
         balance: "0",
@@ -120,11 +124,18 @@ export class BudgetRepository {
   static async updateBudget(
     userId: number,
     categoryId: number,
-    monthlyLimit: number,
+    updates: { monthlyLimit?: number, name?: string },
   ): Promise<Budget | undefined> {
+    const set: Record<string, unknown> = {};
+    if (updates.monthlyLimit !== undefined) {
+      set.monthlyLimit = String(updates.monthlyLimit);
+    }
+    if (updates.name !== undefined) {
+      set.name = updates.name;
+    }
     const [budget] = await db
       .update(budgetsTable)
-      .set({ monthlyLimit: String(monthlyLimit) })
+      .set(set)
       .where(and(
         eq(budgetsTable.userId, userId),
         eq(budgetsTable.categoryId, categoryId),

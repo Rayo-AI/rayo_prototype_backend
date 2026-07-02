@@ -18,7 +18,7 @@ function getCurrentMonthRange() {
 
 async function calcBudgetResponse(
   userId: number,
-  budget: { id: number; categoryId: number; monthlyLimit: string; balance: string; rollover: boolean },
+  budget: { id: number; name: string; categoryId: number; monthlyLimit: string; balance: string; rollover: boolean },
 ) {
   const { start, end } = getCurrentMonthRange();
   const category = await CategoryUseCase.findCategoryById(budget.categoryId);
@@ -36,6 +36,7 @@ async function calcBudgetResponse(
   return {
     id: budget.id,
     userId,
+    name: budget.name,
     categoryId: budget.categoryId,
     category: category?.name,
     monthlyLimit,
@@ -71,12 +72,12 @@ export const setBudget = asyncHandler(async (req, res) => {
         parentSlug: parsed.data.parentSlug,
       });
 
-  const { monthlyLimit, rollover } = parsed.data;
+  const { name, monthlyLimit, rollover } = parsed.data;
 
   const existing = await BudgetUseCase.getBudgetByCategoryId(userId, categoryId);
   const budget = existing
-    ? await BudgetUseCase.updateBudget(userId, categoryId, monthlyLimit)
-    : await BudgetUseCase.createBudget(userId, categoryId, monthlyLimit, rollover);
+    ? await BudgetUseCase.updateBudget(userId, categoryId, { monthlyLimit, name })
+    : await BudgetUseCase.createBudget(userId, name, categoryId, monthlyLimit, rollover);
 
   if (!budget) {
     throw new ErrorResponse("Failed to create or update budget", 500);
@@ -84,7 +85,6 @@ export const setBudget = asyncHandler(async (req, res) => {
 
   const response = await calcBudgetResponse(userId, budget);
   const validated = UpsertBudgetResponse.parse(response);
-  logger.info(`Budget for category ID ${categoryId} ${existing ? "updated" : "created"} for user ID ${userId}`);
   return appResponse(res, 200, validated);
 });
 

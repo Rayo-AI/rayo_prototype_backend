@@ -31,7 +31,6 @@ passport.use(
     },
     async (req: any, _accessToken: any, _refreshToken: any, profile: any, done: any) => {
       try {
-        console.log('Google profile:', profile);
 
         const googleId = String(profile.id);
         

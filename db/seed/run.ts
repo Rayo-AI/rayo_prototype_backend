@@ -5,7 +5,6 @@ import { SYSTEM_CATEGORIES } from "./category.ts";
 import { eq } from "drizzle-orm";
 
 async function seed() {
-  console.log("Seeding system categories...");
 
   for (const cat of SYSTEM_CATEGORIES) {
     const existing = await db

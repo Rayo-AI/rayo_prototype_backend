@@ -150,8 +150,6 @@ export const dashboardSummary = asyncHandler(async (req, res) => {
     },
     CACHE_TTL.MEDIUM
   );
-
-  console.log(summary);
   
   return appResponse(
     res, 200,

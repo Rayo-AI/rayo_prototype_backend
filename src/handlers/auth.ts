@@ -332,7 +332,6 @@ export const googleOAuthCallback = asyncHandler(async (req, res) => {
 
     // Always redirect back to the auth page (errorUrl's origin) —
     // it's NOT a protected route, so middleware won't intercept it.
-    console.log(`Redirecting to ${errorUrl} with token for user ${user.email} (ID: ${user.id})`);
     return res.redirect(`${errorUrl}?token=${encodeURIComponent(token)}&isNewUser=${String(isNewUser)}`);
   } catch (err: any) {
     logger.error("Google OAuth - Token creation failed", err);
